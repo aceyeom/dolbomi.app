@@ -1,4 +1,7 @@
 # TEMPO — MVP PRODUCT SPEC
+
+> 📁 **이 문서는 [`docs/`](./docs/README.md) 트리로 재구성되었습니다.** 반복 개발·탐색은 거기서 하세요. 이 파일은 레거시/원본(diff 참고용)으로 보존됩니다.
+
 ### The complete build doc for the limited MVP feature set
 > ROK military self-development → society launchpad · Jun 2026
 > This is the **buildable** spec: every MVP feature fully mechanized, every opportunity researched from real government/program sources, every data model laid out. The roadmap doc (PRODUCT.md / v4) is the *why*; this is the *what you actually build*.
