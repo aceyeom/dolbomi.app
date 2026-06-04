@@ -19,14 +19,14 @@ M1/E1과 **동일 포맷·깊이**로 작성: What / Eligibility / Reward(worked
 - **C3 · 한국사능력검정시험** — 2026 회차·심화/기본 급수·시험일·가산점.
 - **C4 · TOEIC** — 2026 정기시험·응시료(자기개발비 대상)·휴가는 부대 내규 범위.
 
-### B. 신규 기회 ~20개 breadth (Sonnet 에이전트 4개)
-`mkdir -p docs/04-catalog/_inbox` 후 background general-purpose(model **sonnet**) 4개 재실행 → 각자 `_inbox/<theme>.md` 작성:
+### B. 신규 기회 **~10개** breadth (Sonnet 에이전트 4개)
+`mkdir -p docs/04-catalog/_inbox` 후 background general-purpose(model **sonnet**) 4개 재실행 → 각자 `_inbox/<theme>.md` 작성. **목표 총량 10개** — 테마당 2–3개씩, 각 테마 안에서 가장 임팩트 큰 것만 선별(억지로 채우지 말 것):
 1. **NX · 국방혁신/창업/SW·AI** → `_inbox/innovation.md` (해군·공군 창업대회, 국방 스타트업 챌린지/K-스타트업, 장병 SW/AI·코딩 교육, 국방 해커톤)
 2. **LX · 자격/면허/학습** → `_inbox/skills-licenses.md` (군 운전면허, 인기 기능사 종목, 한국어/국어 자격, 검정고시, 디지털 학습, 무료 어학)
 3. **RX · 표창/포상휴가 이벤트** → `_inbox/recognition.md` (국방 제안제도, 군 UCC/사진/웹툰/수기 공모전, 봉사·헌혈 유공, 모범용사 표창, 경연대회)
 4. **PX · 금융/복지/전역후** → `_inbox/finance-transition.md` (청년도약계좌, 국가보훈부 전직지원, 내일배움카드, 워크넷/취업박람회, 청년정책, 나라사랑카드 제휴)
 
-에이전트 공통 규칙: 한국어 우선 · 코드 식별자 영어 · 휴가=**부대 내규 범위 "부대별 상이"** · 모든 수치 **시드값 + source_url + verified_at** · 항목별 **약점/리스크** · 공식(.go.kr 등) 출처 우선 · 커밋/푸시·타 파일 수정 금지(자기 inbox 파일만).
+에이전트 공통 규칙: 한국어 우선 · 코드 식별자 영어 · 휴가=**부대 내규 범위 "부대별 상이"** · 모든 수치 **시드값 + source_url + verified_at** · 항목별 **약점/리스크** · 공식(.go.kr 등) 출처 우선 · 커밋/푸시·타 파일 수정 금지(자기 inbox 파일만). **품질 > 수량: 검증 안 되는 항목은 빼고 10개를 못 채워도 됨.**
 
 ### C. 큐레이션 (Opus가 직접)
 에이전트 완료 후: 중복 제거, 기존 카탈로그와 충돌 시 조용히 검증값으로 교정(+source_url·verified_at), **기존 7개 카테고리 파일(`craft/edge/body/mind/people/money/post-discharge.md`)로만 병합 — 신규 카테고리 파일 만들지 말 것**(사용자 결정: 6스탯+전역후 1:1 유지), `_inbox` 정리.
