@@ -29,7 +29,7 @@ M1/E1과 **동일 포맷·깊이**로 작성: What / Eligibility / Reward(worked
 에이전트 공통 규칙: 한국어 우선 · 코드 식별자 영어 · 휴가=**부대 내규 범위 "부대별 상이"** · 모든 수치 **시드값 + source_url + verified_at** · 항목별 **약점/리스크** · 공식(.go.kr 등) 출처 우선 · 커밋/푸시·타 파일 수정 금지(자기 inbox 파일만).
 
 ### C. 큐레이션 (Opus가 직접)
-에이전트 완료 후: 중복 제거, 기존 카탈로그와 충돌 시 조용히 검증값으로 교정(+source_url·verified_at), 적절한 카테고리 파일(`craft/edge/body/mind/people/money/post-discharge.md`, 필요시 신규)로 병합, `_inbox` 정리.
+에이전트 완료 후: 중복 제거, 기존 카탈로그와 충돌 시 조용히 검증값으로 교정(+source_url·verified_at), **기존 7개 카테고리 파일(`craft/edge/body/mind/people/money/post-discharge.md`)로만 병합 — 신규 카테고리 파일 만들지 말 것**(사용자 결정: 6스탯+전역후 1:1 유지), `_inbox` 정리.
 
 ### D. 마무리
 - `docs/appendix-sources.md` 에 신규 출처 + 검증일 갱신.
