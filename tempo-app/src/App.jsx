@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Icon } from './icons';
 import { ScreenHead } from './components/ui';
 import { soldier, stats as allStats, tonight as tonightData, oppById, catalog } from './data';

@@ -1,12 +1,11 @@
-import React from 'react';
 import { Icon } from '../icons';
-import { Card, Tag, SectionHeader, IconChip, StatBar } from '../components/ui';
+import { Card, Tag, SectionHeader, IconChip } from '../components/ui';
 import { STAT_C } from '../icons';
 import { stats as allStats } from '../data';
 import { GuardianHero } from '../components/creature/GuardianCard';
 import { StatRow } from '../components/SkillDetail';
 
-export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenCheckin, mood, statMode, showAi, creaturePath, creatureAnimal, theme, pulseSignal, milestones, onPickPath, onOpenOpp, onOpenAvatar }) {
+export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenCheckin, mood, statMode, showAi, creaturePath, creatureAnimal, pulseSignal, milestones, onPickPath, onOpenOpp, onOpenAvatar }) {
   const done = quests.filter((q) => q.done).length;
 
   return (

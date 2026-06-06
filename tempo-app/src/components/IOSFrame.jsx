@@ -1,5 +1,3 @@
-import React from 'react';
-
 export function IOSStatusBar({ dark = false, time = '9:41' }) {
   const c = dark ? '#fff' : '#000';
   return (
@@ -51,7 +49,7 @@ export function IOSGlassPill({ children, dark = false, style = {} }) {
   );
 }
 
-export function IOSDevice({ children, width = 402, height = 874, dark = false, title, keyboard = false }) {
+export function IOSDevice({ children, width = 402, height = 874, dark = false }) {
   return (
     <div style={{
       width, height, borderRadius: 48, overflow: 'hidden',

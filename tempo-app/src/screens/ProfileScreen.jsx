@@ -1,5 +1,3 @@
-import React from 'react';
-import { Icon } from '../icons';
 import { Card, SectionHeader } from '../components/ui';
 import { titles } from '../data';
 import { GuardianHero, evolutionOf } from '../components/creature/GuardianCard';

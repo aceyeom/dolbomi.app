@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Icon } from '../icons';
-import { Tag, StatBar } from './ui';
-import { STAT_C } from '../icons';
+import { useState } from 'react';
+import { Icon, STAT_C } from '../icons';
+import { StatBar } from './ui';
 import { catalog, tonight, stats } from '../data';
 
 const SIZE_MIN = { S: '5분', M: '20분', L: '45분' };

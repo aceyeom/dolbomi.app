@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, Tag, Btn, SectionHeader, ProgressBar } from '../components/ui';
 import { STAT_C, STATUS } from '../icons';
@@ -21,7 +21,7 @@ function derive(o, ms, replanned) {
   return { fill, expected, behind, status, st: STATUS[status], pips, totXp };
 }
 
-export function OppProgressBar({ o, ms, compact }) {
+export function OppProgressBar({ o, ms }) {
   const [replanned, setReplanned] = useState(false);
   const d = derive(o, ms, replanned);
   return (

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, Tag, Btn, SectionHeader, IconChip } from '../components/ui';
-import { STATUS } from '../icons';
 import { cats } from '../data';
 import { OppProgressBar } from './OppPlan';
 
