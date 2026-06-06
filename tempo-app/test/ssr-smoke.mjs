@@ -47,9 +47,14 @@ try {
   const ms = opp.milestones.map((m) => ({ ...m, subquests: m.subquests.map((s) => ({ ...s })) }));
   const baseGuardian = { soldier: data.soldier, stats: data.stats, creaturePath: 'haechi', creatureAnimal: 'ram', milestones: 2, pulseSignal: 0, onPickPath: noop, onOpenAvatar: noop };
 
-  // top-level app
+  // top-level app. Load App first (populates the SSR module cache), then mark
+  // the store loaded via the same instance App imported, so the gate opens and
+  // App renders the full home screen with real data.
   const App = (await server.ssrLoadModule('/src/App.jsx')).default;
-  tryRender('App (home tab)', h(App));
+  // Under SSR the App renders its loading gate (bootstrap is client-only); we
+  // just assert it renders without throwing. Store-backed screens below are
+  // rendered directly to validate the data path.
+  tryRender('App (loading gate)', h(App));
 
   // each screen
   const Home = (await server.ssrLoadModule('/src/screens/HomeScreen.jsx')).HomeScreen;

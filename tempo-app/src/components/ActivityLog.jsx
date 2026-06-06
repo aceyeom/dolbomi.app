@@ -1,8 +1,8 @@
 import React from 'react';
-import { Icon } from '../icons';
+import { Icon, STAT_C } from '../icons';
 import { Card, Tag } from './ui';
-import { STAT_C } from '../icons';
-import { activity, wrapped } from '../data';
+import { wrapped } from '../data';
+import { useStore } from '../store';
 
 const won = (n) => n >= 10000 ? `${(n / 10000).toFixed(n % 10000 ? 1 : 0)}만원` : `${n.toLocaleString()}원`;
 
@@ -48,6 +48,7 @@ function LogEntry({ e, first, last }) {
 }
 
 function ActivityLog({ onOpenRecap }) {
+  const activity = useStore((s) => s.activity);
   const [expanded, setExpanded] = React.useState(false);
   const all = activity || [];
   const shown = expanded ? all : all.slice(0, 5);

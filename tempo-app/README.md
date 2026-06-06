@@ -1,33 +1,59 @@
 # TEMPO — 군인 자기개발 앱
 
-A production Vite + React implementation of the TEMPO prototype: a gamified
-self-development app for Korean military service members. Soldiers grow six
-stats (전투력/정신력/자산력/숙련도/지휘력/담력) by completing quests drawn from a
-real opportunity catalog (certifications, contests, savings programs), climb a
+A full-stack implementation of the TEMPO prototype: a gamified self-development
+app for Korean military service members. Soldiers grow six stats
+(전투력/정신력/자산력/숙련도/지휘력/담력) by completing quests drawn from a real
+opportunity catalog (certifications, contests, savings programs), climb a
 **vacation ladder**, browse a **benefits hub**, and watch a **live 3D guardian
-creature** evolve as their total XP rises.
+creature** evolve as their total XP rises. Progress (quest completion, plan
+milestones, daily check-ins) persists to a real database.
 
 ## Tech stack
 
-- **Vite + React 19** — SPA build pipeline (chosen so Three.js runs in a clean
-  client context)
-- **Three.js** — live 3D guardian avatar with a per-vertex gold shader that
-  creeps across the model as stats grow
-- **CSS custom properties** — design-token system: 3 palettes (골드/택티컬/스틸)
-  × light/dark themes
-- Pure ES modules throughout (converted from the prototype's Babel-standalone +
-  `window` globals)
+**Frontend** (this directory)
+- **Vite + React 19** — SPA build pipeline (so Three.js runs in a clean client context)
+- **zustand** — global store holding live, API-backed data; screens read from it
+- **Three.js** — live 3D guardian avatar with a per-vertex gold shader
+- **CSS custom properties** — 3 palettes (골드/택티컬/스틸) × light/dark themes
 
-## Running
+**Backend** (`server/`)
+- **Express + better-sqlite3** — REST API over a SQLite database
+- **JWT auth** (scrypt password hashing) — per-soldier sessions
+- Standard SQL schema → swaps to Postgres for production with minimal changes
+
+## Running the full stack
 
 ```bash
-npm install
-npm run dev          # dev server with HMR
+# 1. backend
+cd server && npm install && npm start     # API on :4000, auto-migrates + seeds
+
+# 2. frontend (separate terminal)
+npm install && npm run dev                 # Vite on :5173, proxies /api → :4000
+
+# …or run both at once from this directory:
+npm run dev:all
+```
+
+The app auto-logs-in as the seeded demo soldier (`demo` / `tempo`) and loads its
+state from the API. If the API is unreachable it falls back to bundled static
+data so the UI still works.
+
+### Scripts
+
+```bash
+# frontend
+npm run dev          # Vite dev server (HMR)
+npm run dev:all      # run backend + frontend together
 npm run build        # production build → dist/
 npm run preview      # serve the production build
 npm run lint         # eslint
 npm run test:smoke   # SSR render-test: renders every screen + overlay,
                      # fails on any runtime error (no browser needed)
+
+# backend (in server/)
+npm start            # start API (auto migrate + seed on first run)
+npm run reset        # wipe + re-migrate + re-seed the DB
+npm run test:api     # boots the server, asserts shapes + persistence
 ```
 
 ## Architecture
@@ -63,15 +89,52 @@ src/
     └── ProfileScreen.jsx    # identity, stat radar, titles, recap
 ```
 
-## Frontend ↔ backend seam
+## How the frontend and backend connect
 
-All app data currently lives in **`src/data/index.js`** as static exports
-(`soldier`, `stats`, `tonight`, `catalog`, `vacation`, `benefits`, `titles`,
-`wrapped`, `activity`). Components import from this module only — they never
-hard-code data. To wire a backend, replace these exports with API/Supabase
-calls returning the same shapes; no screen code needs to change. The state that
-*mutates* at runtime (quest completion, milestone toggles, mood, XP pulses)
-is lifted into `App.jsx` and is the natural set of write endpoints to persist.
+```
+src/api/client.js   thin fetch client (stores JWT, auto-logs-in demo soldier)
+src/store.js        zustand store — bootstrap() loads /api/state; screens read
+                    live data from here; mutations call the API + update locally
+src/data/index.js   single source of truth for SEED data + static UI config
+                    (cats, moods, benefitFilters, monthly-recap copy) + the
+                    offline fallback the store uses when the API is down
+```
+
+On boot, `App.jsx` calls `store.bootstrap()` → `ensureSession()` (logs in the
+demo soldier if there's no token) → `GET /api/state`. Screens read **live**
+data (`soldier`, `stats`, `tonight`, `catalog`, `benefits`, `titles`,
+`vacation`, `activity`) from the store. Interactions call store actions, which
+hit the API and reconcile with the response:
+
+| Action | Endpoint |
+| --- | --- |
+| Complete one of tonight's quests | `POST /api/tonight/:questId/toggle` |
+| Toggle a plan sub-quest | `POST /api/opportunities/:oppId/subquests/:subquestId/toggle` |
+| Daily check-in (mood) | `POST /api/checkin` |
+| Load everything | `GET /api/state` |
+| Log in | `POST /auth/login` |
+
+The server (`server/`) is a normal layered Express app:
+
+```
+server/
+├── index.js              # express app; auto-migrates + seeds an empty DB on boot
+├── auth.js               # scrypt hashing + JWT issue/verify + requireAuth middleware
+├── db/
+│   ├── schema.sql        # tables (reference data + per-soldier mutable state)
+│   ├── migrate.js        # apply schema (idempotent)
+│   ├── seed.js           # seed from src/data/index.js + demo soldier
+│   └── index.js          # better-sqlite3 connection
+├── repositories/
+│   ├── state.js          # read assembler → exact frontend shapes (computes fill%)
+│   └── mutations.js      # quest/subquest toggles, check-ins
+└── routes/api.js         # REST routes
+```
+
+The seed imports `src/data/index.js` directly, so the prototype's data stays the
+single source of truth. To move to **Postgres** in production: point a `pg`-backed
+adapter at the same `schema.sql` (swap `AUTOINCREMENT`→`SERIAL`, integer bools→
+`BOOLEAN`) — the repositories' SQL is standard.
 
 ## External assets & graceful fallbacks
 

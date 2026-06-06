@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, ProgressBar, IconChip } from '../components/ui';
 import { STATUS } from '../icons';
-import { catalog, cats } from '../data';
+import { cats } from '../data';
+import { useStore } from '../store';
 
 export function RadarScreen({ onOpenOpp }) {
+  const catalog = useStore((s) => s.catalog);
   const [filter, setFilter] = useState('전체');
   const catList = ['전체', '대회', '자격증', '어학', '금융', '체력'];
   const list = filter === '전체' ? catalog : catalog.filter((o) => o.cat === filter);

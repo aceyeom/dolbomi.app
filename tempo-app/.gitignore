@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# backend (SQLite db files + test artifacts)
+server/tempo.db
+server/tempo.db-wal
+server/tempo.db-shm
+server/test/test.db*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

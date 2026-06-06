@@ -1,8 +1,8 @@
 import React from 'react';
-import { Icon } from '../icons';
+import { Icon, STAT_C } from '../icons';
 import { Card, Btn, Tag } from './ui';
-import { STAT_C } from '../icons';
-import { moods, energy, stats, wrapped, won } from '../data';
+import { moods, energy, wrapped, won } from '../data';
+import { useStore } from '../store';
 
 function SheetShell({ children, onClose }) {
   return (
@@ -55,13 +55,14 @@ function CheckInSheet({ onClose, onDone }) {
         {energyVal === 0 ? '에너지 바닥이네. 오늘은 5분짜리 미니 퀘스트만 줄게.' : energyVal >= 2 ? '컨디션 좋다. 하나 더 밀어붙여보자.' : ' '}
       </div>
       <div style={{ marginTop: 14 }}>
-        <Btn onClick={() => ready && onDone(mood)} style={{ opacity: ready ? 1 : 0.4 }}>오늘 밤의 3 받기</Btn>
+        <Btn onClick={() => ready && onDone({ ...mood, energy: energyVal })} style={{ opacity: ready ? 1 : 0.4 }}>오늘 밤의 3 받기</Btn>
       </div>
     </SheetShell>
   );
 }
 
 function QuestComplete({ quest, guardianName, onClose }) {
+  const stats = useStore((s) => s.stats);
   React.useEffect(() => { const t = setTimeout(onClose, 1500); return () => clearTimeout(t); }, []);
   const stat = stats.find((s) => s.key === quest.stat);
   const c = STAT_C[quest.stat];
@@ -130,6 +131,7 @@ function QuestComplete({ quest, guardianName, onClose }) {
 }
 
 function Wrapped() {
+  const stats = useStore((s) => s.stats);
   const w = wrapped;
   const items = [
     { icon: 'check', big: w.quests + '개', label: '완료한 퀘스트' },

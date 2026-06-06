@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Icon, STAT_C } from '../icons';
 import { StatBar } from './ui';
-import { catalog, tonight, stats } from '../data';
+import { useStore } from '../store';
 
 const SIZE_MIN = { S: '5분', M: '20분', L: '45분' };
 
-function questsForStat(statKey) {
+function questsForStat(statKey, catalog, tonight) {
   const rows = [];
   (catalog || []).forEach((o) => o.milestones.forEach((m) => m.subquests.forEach((s) => {
     if (s.stat === statKey) rows.push({ ...s, opp: o.title, oppId: o.id, cat: o.cat });
@@ -15,9 +15,12 @@ function questsForStat(statKey) {
 }
 
 function SkillDetail({ statKey, onOpenOpp }) {
+  const catalog = useStore((s) => s.catalog);
+  const tonight = useStore((s) => s.tonight);
+  const stats = useStore((s) => s.stats);
   const c = STAT_C[statKey] || 'var(--accent)';
   const stat = stats.find((s) => s.key === statKey) || {};
-  const rows = questsForStat(statKey);
+  const rows = questsForStat(statKey, catalog, tonight);
   const done = rows.filter((r) => r.done);
   const remain = rows.filter((r) => !r.done);
   const [showDone, setShowDone] = useState(false);

@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Icon } from './icons';
 import { ScreenHead } from './components/ui';
-import { soldier, stats as allStats, tonight as tonightData, oppById, catalog } from './data';
+import { useStore } from './store';
 import { HomeScreen } from './screens/HomeScreen';
 import { RadarScreen } from './screens/RadarScreen';
 import { VacationScreen } from './screens/VacationScreen';
@@ -47,19 +47,27 @@ export default function App() {
   const [sheet, setSheet] = useState(null);
   const [celebrate, setCelebrate] = useState(null);
   const [showAvatar, setShowAvatar] = useState(false);
-  const [quests, setQuests] = useState(tonightData);
   const [mood, setMood] = useState(null);
   const [pulse, setPulse] = useState(0);
-  const [oppMs, setOppMs] = useState({});
 
-  const getMs = (o) => oppMs[o.id] || o.milestones.map((m) => ({ ...m, subquests: m.subquests.map((s) => ({ ...s })) }));
+  // live data from the API-backed store
+  const loaded = useStore((s) => s.loaded);
+  const soldier = useStore((s) => s.soldier);
+  const allStats = useStore((s) => s.stats);
+  const quests = useStore((s) => s.tonight);
+  const catalog = useStore((s) => s.catalog);
+  const bootstrap = useStore((s) => s.bootstrap);
+  const oppById = useStore((s) => s.oppById);
+  const storeToggleTonight = useStore((s) => s.toggleTonight);
+  const storeToggleSubquest = useStore((s) => s.toggleSubquest);
+  const storeCheckin = useStore((s) => s.checkin);
 
-  const toggleSub = (oId, mid, sid, verified) => setOppMs((prev) => {
-    const o = oppById(oId);
-    const base = prev[oId] || o.milestones.map((m) => ({ ...m, subquests: m.subquests.map((s) => ({ ...s })) }));
-    const next = base.map((m) => m.id !== mid ? m : ({ ...m, subquests: m.subquests.map((s) => s.id !== sid ? s : ({ ...s, done: !s.done, verified: !s.done ? !!verified : false })) }));
-    return { ...prev, [oId]: next };
-  });
+  useEffect(() => { bootstrap(); }, [bootstrap]);
+
+  // resolve a pushed opportunity from the live catalog so detail/plan screens
+  // reflect saved progress as subquests toggle
+  const pushedOpp = pushed && pushed.id ? oppById(pushed.id) : null;
+  const getMs = (o) => o.milestones;
 
   const statMode = t.statMode === '컬러' ? 'color' : 'mono';
   const theme = t.theme === '라이트' ? 'light' : 'dark';
@@ -71,19 +79,18 @@ export default function App() {
     const cat = (catalog || []).reduce((n, o) =>
       n + o.milestones.filter((m) => m.subquests.every((s) => s.done)).length, 0);
     return cat + quests.filter((q) => q.done).length;
-  }, [quests]);
+  }, [catalog, quests]);
 
-  const toggleQuest = (id) => setQuests((qs) => qs.map((q) => {
-    if (q.id !== id) return q;
-    const nd = !q.done;
-    if (nd) setCelebrate(q);
-    return { ...q, done: nd };
-  }));
+  const toggleQuest = (id) => {
+    const q = quests.find((x) => x.id === id);
+    if (q && !q.done) setCelebrate(q);   // celebrate on completion
+    storeToggleTonight(id);
+  };
 
   const goTab = (k) => { setPushed(null); setTab(k); };
-  const openOpp = (o) => setPushed({ type: 'opp', data: o });
-  const openPlan = (o) => setPushed({ type: 'oppPlan', data: o });
-  const makeQuest = (oId) => { const o = oppById(oId); if (o) setPushed({ type: 'opp', data: o }); };
+  const openOpp = (o) => setPushed({ type: 'opp', id: o.id });
+  const openPlan = (o) => setPushed({ type: 'oppPlan', id: o.id });
+  const makeQuest = (oId) => { if (oppById(oId)) setPushed({ type: 'opp', id: oId }); };
 
   let screen = null;
   if (tab === 'home') screen = <HomeScreen soldier={soldier} stats={allStats} quests={quests} statMode={statMode} mood={mood} showAi={t.showAi} onToggleQuest={toggleQuest} onOpenCheckin={() => setSheet('checkin')} creaturePath={creaturePath} creatureAnimal={creatureAnimal} theme={theme} pulseSignal={pulse} milestones={milestones} onPickPath={(v) => setTweak('creaturePath', v)} onOpenOpp={makeQuest} onOpenAvatar={() => setShowAvatar(true)} />;
@@ -94,11 +101,11 @@ export default function App() {
 
   let pushContent = null, pushTitle = '';
   if (pushed) {
-    if (pushed.type === 'opp') {
-      pushContent = <OppDetail o={pushed.data} ms={getMs(pushed.data)} onOpenPlan={() => openPlan(pushed.data)} onAddTonight={() => { setPushed(null); setTab('home'); }} />;
+    if (pushed.type === 'opp' && pushedOpp) {
+      pushContent = <OppDetail o={pushedOpp} ms={getMs(pushedOpp)} onOpenPlan={() => openPlan(pushedOpp)} onAddTonight={() => { setPushed(null); setTab('home'); }} />;
       pushTitle = '기회 상세';
-    } else if (pushed.type === 'oppPlan') {
-      pushContent = <OppPlan o={pushed.data} ms={getMs(pushed.data)} onToggle={(mid, sid, v) => toggleSub(pushed.data.id, mid, sid, v)} onAddTonight={() => { setPushed(null); setTab('home'); }} />;
+    } else if (pushed.type === 'oppPlan' && pushedOpp) {
+      pushContent = <OppPlan o={pushedOpp} ms={getMs(pushedOpp)} onToggle={(mid, sid, v) => storeToggleSubquest(pushedOpp.id, sid, v)} onAddTonight={() => { setPushed(null); setTab('home'); }} />;
       pushTitle = '전체 계획';
     } else if (pushed.type === 'wrapped') {
       pushContent = <Wrapped />;
@@ -107,6 +114,18 @@ export default function App() {
   }
 
   const tabTitle = TAB_TITLES[tab];
+
+  if (!loaded || !soldier) {
+    return (
+      <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
+        style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--sub)' }}>
+          {Icon('sparkle', { size: 28, color: 'var(--accent)', stroke: 1.8 })}
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.04em' }}>TEMPO 불러오는 중…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
@@ -145,7 +164,7 @@ export default function App() {
         })}
       </nav>
 
-      {sheet === 'checkin' && <CheckInSheet onClose={() => setSheet(null)} onDone={(m) => { setMood(m); setSheet(null); }} />}
+      {sheet === 'checkin' && <CheckInSheet onClose={() => setSheet(null)} onDone={(m) => { setMood(m); storeCheckin(m.key, m.energy); setSheet(null); }} />}
       {celebrate && <QuestComplete quest={celebrate} guardianName={(CREATURE_PATHS || []).find((p) => p.key === creaturePath)?.ko || '수호신'} onClose={() => { setCelebrate(null); setPulse((p) => p + 1); }} />}
       {showAvatar && <AvatarViewer stats={allStats} creaturePath={creaturePath} creatureAnimal={creatureAnimal} onSwapPath={swapToPath} milestones={milestones} theme={theme} soldier={soldier} onClose={() => setShowAvatar(false)} />}
 

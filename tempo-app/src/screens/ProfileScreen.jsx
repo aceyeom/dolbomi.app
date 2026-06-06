@@ -1,11 +1,12 @@
 import { Card, SectionHeader } from '../components/ui';
-import { titles } from '../data';
+import { useStore } from '../store';
 import { GuardianHero, evolutionOf } from '../components/creature/GuardianCard';
 import { StatRow } from '../components/SkillDetail';
 import { BadgeCard } from '../components/Badges';
 import { ActivityLog } from '../components/ActivityLog';
 
 export function ProfileScreen({ soldier, stats, statMode, onOpen, creaturePath, creatureAnimal, milestones, pulseSignal, onPickPath, onOpenOpp, onOpenAvatar }) {
+  const titles = useStore((s) => s.titles);
   const owned = titles.filter((t) => t.owned).length;
   const evo = evolutionOf(stats);
 

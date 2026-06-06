@@ -1,7 +1,5 @@
-import { Icon } from '../icons';
+import { Icon, STAT_C } from '../icons';
 import { Card, Tag, SectionHeader, IconChip } from '../components/ui';
-import { STAT_C } from '../icons';
-import { stats as allStats } from '../data';
 import { GuardianHero } from '../components/creature/GuardianCard';
 import { StatRow } from '../components/SkillDetail';
 
@@ -40,7 +38,7 @@ export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenChecki
 
       <SectionHeader right={`${done} / ${quests.length} 완료`}>오늘 밤의 3</SectionHeader>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
-        {quests.map((q) => <QuestRow key={q.id} q={q} stats={allStats} onToggle={() => onToggleQuest(q.id)} />)}
+        {quests.map((q) => <QuestRow key={q.id} q={q} stats={stats} onToggle={() => onToggleQuest(q.id)} />)}
       </div>
 
       <SectionHeader right="수호신 성장" caption="탭하면 그 능력치의 완료·남은 퀘스트가 펼쳐져">능력치 · 경험치</SectionHeader>

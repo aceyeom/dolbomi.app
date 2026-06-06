@@ -1,11 +1,13 @@
 import { Icon } from '../icons';
 import { Card, Tag, ProgressBar } from '../components/ui';
 import { STATUS } from '../icons';
-import { catalog, vacation } from '../data';
+import { useStore } from '../store';
 
 const MAXD = { startup: 5, toeic: 5, hanguksa: 3, cheryeok: 3, defai: 4 };
 
 export function VacationScreen({ onOpenOpp }) {
+  const catalog = useStore((s) => s.catalog);
+  const vacation = useStore((s) => s.vacation);
   const vacOpps = catalog.filter((o) => o.reward.kind === '휴가');
   const started = vacOpps.filter((o) => o.started);
   const future = vacOpps.filter((o) => !o.started);

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, Tag, IconChip } from '../components/ui';
-import { benefits, benefitFilters } from '../data';
+import { benefitFilters } from '../data';
+import { useStore } from '../store';
 
 const GROUPS = [
   { key: '금융',        label: '금융',          icon: 'wallet',     tint: 'var(--positive)', rgb: 'var(--positive-rgb)', desc: '정부가 원금을 얹어주는 것들' },
@@ -13,6 +14,7 @@ const GROUP_OF = { b1: '금융', b7: '금융', b3: '자격증·어학', b6: '자
 const PASSIVE = { b1: true, b7: true };
 
 export function BenefitsScreen({ onMakeQuest }) {
+  const benefits = useStore((s) => s.benefits);
   const [branch, setBranch] = useState('육군');
   const grouped = GROUPS.map((g) => ({ ...g, items: benefits.filter((b) => GROUP_OF[b.id] === g.key) })).filter((g) => g.items.length);
 
