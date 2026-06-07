@@ -45,7 +45,7 @@ const THEMES = {
     bg: 0x12100e, marble: 0xe5d8c0, marbleDeep: 0xb6a382, hoof: 0x4a4034,
     ambient: 0x4a4234, ambI: 0.65,
     key: 0xfff4e2, keyI: 2.0, rim: 0xffd9a0, rimI: 2.4, fill: 0x8fa6c8, fillI: 0.6,
-    envI: 0.7, exposure: 1.02, bloom: { strength: 0.46, radius: 0.62, threshold: 0.82 },
+    envI: 0.7, exposure: 1.02, bloom: { strength: 0.28, radius: 0.44, threshold: 0.82 },
   },
   light: {
     bg: 0xefe7d8, marble: 0xf1e8d6, marbleDeep: 0xccbea4, hoof: 0x8a7d6b,
@@ -317,7 +317,7 @@ function create({ container, path = 'haechi', animal = null, companion = null, s
     return m;
   }
   function gold(emi = 0) { return new THREE.MeshStandardMaterial({ color: new THREE.Color(0xf0c14a), metalness: 1.0, roughness: 0.26, envMapIntensity: TH.envI * 1.3, emissive: new THREE.Color(0xffcf6e), emissiveIntensity: emi }); }
-  function gem(rig, intensity = 1.1) { const c = accentForPath(rig.path); return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: intensity, metalness: 0.3, roughness: 0.18, envMapIntensity: TH.envI }); }
+  function gem(rig, intensity = 0.65) { const c = accentForPath(rig.path); return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: intensity, metalness: 0.3, roughness: 0.18, envMapIntensity: TH.envI }); }
   // clean metallic accent ring (boots) — RED for haechi/ram, BLUE for dragon/fox
   function accentRingMat(rig, emi = 0.5) { const c = accentForPath(rig.path); return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: emi, metalness: 0.85, roughness: 0.3, envMapIntensity: TH.envI * 1.1 }); }
 

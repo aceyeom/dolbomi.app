@@ -13,6 +13,7 @@ import { CheckInSheet, QuestComplete, Wrapped } from './components/Overlays';
 import { AvatarViewer } from './components/creature/AvatarViewer';
 import { CREATURE_PATHS } from './components/creature/CreatureHero';
 import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakToggle, TweakRadio, TweakSelect } from './components/TweaksPanel';
+import { IOSDevice } from './components/IOSFrame';
 import './styles/tokens.css';
 
 const TWEAK_DEFAULTS = {
@@ -115,19 +116,24 @@ export default function App() {
 
   const tabTitle = TAB_TITLES[tab];
 
+  const isDark = theme === 'dark';
+
   if (!loaded || !soldier) {
     return (
-      <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
-        style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--sub)' }}>
-          {Icon('sparkle', { size: 28, color: 'var(--accent)', stroke: 1.8 })}
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.04em' }}>TEMPO 불러오는 중…</span>
+      <IOSDevice dark={isDark}>
+        <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
+          style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--sub)' }}>
+            {Icon('sparkle', { size: 28, color: 'var(--accent)', stroke: 1.8 })}
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.04em' }}>TEMPO 불러오는 중…</span>
+          </div>
         </div>
-      </div>
+      </IOSDevice>
     );
   }
 
   return (
+    <IOSDevice dark={isDark}>
     <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
       style={{ '--game': (t.game ?? 20) / 100, '--istroke': t.istroke ?? 1.75, height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240, pointerEvents: 'none', zIndex: 0,
@@ -183,5 +189,6 @@ export default function App() {
         <TweakToggle label="오늘의 한 줄" value={t.showAi} onChange={(v) => setTweak('showAi', v)} />
       </TweaksPanel>
     </div>
+    </IOSDevice>
   );
 }
