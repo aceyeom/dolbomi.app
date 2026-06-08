@@ -1,7 +1,7 @@
 // screen-home.jsx — Home / HUD. Check-in, Tonight's 3, D-day, 적금, The Gap, one-line.
 (function () {
 const { Icon, Card, Tag, ProgressBar, StatBar, SectionHeader, IconChip } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenCheckin, mood, statMode, showAi, creaturePath, creatureAnimal, theme, pulseSignal, milestones, onPickPath, onOpenOpp, onOpenAvatar }) {
   const done = quests.filter((q) => q.done).length;

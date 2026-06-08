@@ -30,7 +30,7 @@
 <script type="module">
 function boot() {
   const stats = { body:62, mind:70, money:64, craft:58, people:66, edge:60 };
-  const c = window.TempoCreature.create({
+  const c = window.DolbomiCreature.create({
     container: document.getElementById('stage'),
     path: 'haechi', companion: 'fox', stats, milestones: 4, theme: 'dark', accent: '#E7A33C', interactive: true,
     onCompanionTap: (p) => c.setPath(p),
@@ -57,8 +57,8 @@ function boot() {
   const mr=document.createElement('input'); mr.type='range'; mr.min=0;mr.max=12;mr.value=4;
   mr.oninput=()=>c.setMilestones(+mr.value); ms.appendChild(mr); panel.appendChild(ms);
 }
-if (window.TempoCreature) boot();
-else window.addEventListener('tempo-creature-ready', boot);
+if (window.DolbomiCreature) boot();
+else window.addEventListener('dolbomi-creature-ready', boot);
 </script>
 </body>
 </html>

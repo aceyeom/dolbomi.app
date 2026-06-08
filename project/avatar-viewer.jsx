@@ -3,7 +3,7 @@
 // readout on a frosted panel so the avatar and its progress sit side by side.
 (function () {
 const { Icon, ProgressBar } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function AvatarViewer({ stats, creaturePath, creatureAnimal = 'ram', onSwapPath, milestones, theme, soldier, onClose }) {
   const evo = window.evolutionOf(stats);

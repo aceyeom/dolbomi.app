@@ -1,4 +1,4 @@
-// creature.js — TEMPO's guardians (수호신): SCULPTED stone-marble mythic beasts.
+// creature.js — DOLBOMI's guardians (수호신): SCULPTED stone-marble mythic beasts.
 // Two fixed identities, each on its own real low-poly mesh, gilded procedurally and
 // dressed with Korean-traditional + "Golden Spartan" gold regalia rigged to the
 // model's own anatomy:
@@ -13,7 +13,7 @@
 // background one renders its complete design, not a default mesh.
 //
 // API (back-compatible):
-//   const c = TempoCreature.create({ container, path, animal, companion, stats, ... });
+//   const c = DolbomiCreature.create({ container, path, animal, companion, stats, ... });
 //   c.setStats(...); c.setMilestones(n); c.setPath(p); c.setAnimal(a);
 //   c.setCompanion(a|null); c.setTheme(th, accent); c.pulse(); c.resize(); c.dispose();
 import * as THREE from 'three';
@@ -791,5 +791,5 @@ function create({ container, path = 'haechi', animal = null, companion = null, s
   return { setStats, setMilestones, setPath, setAnimal, setCompanion, setTheme, pulse, resize, dispose, setYaw: (r) => { yawOffset = r; } };
 }
 
-window.TempoCreature = { create };
-window.dispatchEvent(new Event('tempo-creature-ready'));
+window.DolbomiCreature = { create };
+window.dispatchEvent(new Event('dolbomi-creature-ready'));

@@ -1,6 +1,6 @@
-// app-data.jsx — full content model for the TEMPO app. Extends window.TEMPO.
+// app-data.jsx — full content model for the DOLBOMI app. Extends window.DOLBOMI.
 (function () {
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 // ── Tonight's quests (sized to a low-energy night) ─────────────
 T.tonight = [
@@ -140,5 +140,5 @@ T.receipt = {
   enlistStats: { body: 41, mind: 38, money: 12, craft: 30, people: 28, edge: 15 },
 };
 
-window.TEMPO = T;
+window.DOLBOMI = T;
 })();

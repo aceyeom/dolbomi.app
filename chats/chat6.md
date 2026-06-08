@@ -136,7 +136,7 @@ Now remove the unused `TitleCard` from profile.
 
 _[tool: str_replace_edit]_
 
-Adding the new scripts to the HTML, after `tempo-ui.jsx`.
+Adding the new scripts to the HTML, after `dolbomi-ui.jsx`.
 
 _[tool: str_replace_edit]_
 

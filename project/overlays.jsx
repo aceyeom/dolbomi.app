@@ -1,7 +1,7 @@
 // overlays.jsx — CheckIn sheet, QuestComplete moment, Monthly recap card.
 (function () {
 const { Icon, Card, Btn, Tag, IconChip } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 const won = T.won;
 
 // ── 60-second check-in (bottom sheet) ──────────────────────────

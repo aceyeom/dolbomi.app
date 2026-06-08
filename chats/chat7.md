@@ -326,7 +326,7 @@ _[tool: show_html]_
 
 _[tool: sleep]_
 
-The screenshot service is temporarily unavailable (platform-side). The app loads and runs cleanly per DOM/console checks. Let me wait briefly and retry.
+The screenshot service is dolbomirarily unavailable (platform-side). The app loads and runs cleanly per DOM/console checks. Let me wait briefly and retry.
 
 _[tool: show_html]_
 

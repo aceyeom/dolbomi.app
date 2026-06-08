@@ -1,7 +1,7 @@
 // screen-profile.jsx — Profile. Identity, stat radar (The Gap), titles, monthly recap.
 (function () {
 const { Icon, Card, Tag, IconChip, SectionHeader } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function ProfileScreen({ soldier, stats, statMode, onOpen, creaturePath, creatureAnimal, milestones, pulseSignal, onPickPath, onOpenOpp, onOpenAvatar }) {
   const owned = T.titles.filter((t) => t.owned).length;

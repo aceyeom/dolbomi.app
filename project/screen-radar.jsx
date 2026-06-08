@@ -1,7 +1,7 @@
 // screen-radar.jsx — Opportunity Radar (the feed). Each card previews the live bar.
 (function () {
 const { Icon, Card, Tag, ProgressBar, IconChip, STATUS } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function RadarScreen({ onOpenOpp }) {
   const [filter, setFilter] = React.useState('전체');

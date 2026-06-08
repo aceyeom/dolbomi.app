@@ -1,5 +1,5 @@
 // skin-fintech.jsx — Skin C: light modern fintech (Toss-like, friendly)
-const { icon: fIcon, navIcon: fNav, nav: fNavItems, won: fWon, stats: fStats, soldier: fSoldier, quests: fQuests } = window.TEMPO;
+const { icon: fIcon, navIcon: fNav, nav: fNavItems, won: fWon, stats: fStats, soldier: fSoldier, quests: fQuests } = window.DOLBOMI;
 
 const FIN = {
   bg: '#eef1f5', card: '#ffffff', ink: '#191f28', sub: '#8b95a1',

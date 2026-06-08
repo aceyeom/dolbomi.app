@@ -8,7 +8,7 @@ const SIZE_MIN = { S: '5분', M: '20분', L: '45분' };
 
 // gather every sub-quest tagged to this stat, across the whole catalog
 function questsForStat(statKey) {
-  const T = window.TEMPO;
+  const T = window.DOLBOMI;
   const rows = [];
   (T.catalog || []).forEach((o) => o.milestones.forEach((m) => m.subquests.forEach((s) => {
     if (s.stat === statKey) rows.push({ ...s, opp: o.title, oppId: o.id, cat: o.cat });
@@ -19,7 +19,7 @@ function questsForStat(statKey) {
 }
 
 function SkillDetail({ statKey, onOpenOpp }) {
-  const T = window.TEMPO;
+  const T = window.DOLBOMI;
   const c = window.TU.STAT_C[statKey] || 'var(--accent)';
   const stat = T.stats.find((s) => s.key === statKey) || {};
   const rows = questsForStat(statKey);

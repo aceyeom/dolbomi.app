@@ -1,7 +1,7 @@
 // app-shell.jsx — App shell: palettes, tab router, push-nav, overlays, tweaks.
 (function () {
 const { Icon, ScreenHead } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "palette": "골드",
@@ -96,7 +96,7 @@ function App({ theme: themeProp, setTheme: setThemeProp }) {
   const tabTitle = TAB_TITLES[tab];
 
   return (
-    <div className="tempo" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
+    <div className="dolbomi" data-pal={PAL_MAP[t.palette] || 'gold'} data-theme={theme}
       style={{ '--game': (t.game ?? 20) / 100, '--istroke': t.istroke ?? 1.75, height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ambient glow */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 240, pointerEvents: 'none', zIndex: 0,
@@ -158,5 +158,5 @@ function App({ theme: themeProp, setTheme: setThemeProp }) {
   );
 }
 
-window.TempoApp = App;
+window.DolbomiApp = App;
 })();

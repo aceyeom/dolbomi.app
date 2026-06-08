@@ -1,7 +1,7 @@
 // data-catalog.jsx — the real Opportunity Catalog (spec Part 4) + Benefits Hub (Part 5)
 // + derived Vacation Ladder. Rich enough to drive the detailed progress bar.
 (function () {
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 // xp by size (opportunity sub-quests carry the ×1.5 real-stakes bonus, Part 2.2)
 const XP = { S: 15, M: 38, L: 90 };
@@ -322,5 +322,5 @@ T.benefits = [
 ];
 T.benefitFilters = { 군별: ['육군', '해군', '공군', '해병'], 관심: ['자격증', '금융', '어학', '체력', '창업'] };
 
-window.TEMPO = T;
+window.DOLBOMI = T;
 })();

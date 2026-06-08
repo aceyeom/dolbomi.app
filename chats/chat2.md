@@ -6,7 +6,7 @@ _Started 2026-06-03 14:14 UTC_
 
 ## User
 
-are you able to see the tempo githubrepo and the files within?
+are you able to see the dolbomi githubrepo and the files within?
 
 ## Assistant
 
@@ -14,11 +14,11 @@ _[tool: github_list_repos]_
 
 _[tool: github_get_tree]_
 
-Yes! I can see the **aceyeom/tempo** repo. Let me explore what's inside it.
+Yes! I can see the **aceyeom/dolbomi** repo. Let me explore what's inside it.
 
 _[tool: github_read_file]_
 
-Let me read the product overview to understand what Tempo is:
+Let me read the product overview to understand what Dolbomi is:
 
 _[tool: read_file]_
 
@@ -30,10 +30,10 @@ It looks like you're sending empty messages — you might be hitting send by acc
 
 Here's what I can see so far:
 
-**The repo** has one file — `PRODUCT_OVERVIEW.md` — a detailed MVP spec for **TEMPO**, an app that helps ROK soldiers turn idle army time into real career/life progress.
+**The repo** has one file — `PRODUCT_OVERVIEW.md` — a detailed MVP spec for **DOLBOMI**, an app that helps ROK soldiers turn idle army time into real career/life progress.
 
 **The project already has a substantial build:**
-- `TEMPO 앱.html` — the main app shell
+- `DOLBOMI 앱.html` — the main app shell
 - Multiple screens: Home, Radar, AI, Squad, Profile
 - Multiple visual skins explored (fintech, neon, tactical, terminal)
 - iOS frame wrapper
@@ -179,7 +179,7 @@ Starting with the foundation. First, the professional icon system — a curated 
 
 _[tool: write_file]_
 
-Now the design foundation — 3 palettes wired for live Tweaks, a gameyness variable, and refined primitives (Card, Tag, Button, ProgressBar, StatBar). This replaces the old `tempo-ui.jsx` wholesale.
+Now the design foundation — 3 palettes wired for live Tweaks, a gameyness variable, and refined primitives (Card, Tag, Button, ProgressBar, StatBar). This replaces the old `dolbomi-ui.jsx` wholesale.
 
 _[tool: write_file]_
 

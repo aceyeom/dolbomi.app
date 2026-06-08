@@ -2,7 +2,7 @@
 // Grouped into clean, labeled categories so the types of benefit read at a glance.
 (function () {
 const { Icon, Card, Tag, IconChip } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 // category grouping (the data has no group field — map it here)
 const GROUPS = [

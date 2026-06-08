@@ -1,7 +1,7 @@
 // skin-tactical-v2.jsx — Skin B, refined: one coherent progress language.
 // Linear everywhere, neutral stat fill w/ EDGE as the single amber accent,
 // aligned columns, no truncation, AI companion one-liner for soul.
-const { icon: b2Icon, navIcon: b2Nav, nav: b2NavItems, won: b2Won, stats: b2Stats, soldier: b2Soldier } = window.TEMPO;
+const { icon: b2Icon, navIcon: b2Nav, nav: b2NavItems, won: b2Won, stats: b2Stats, soldier: b2Soldier } = window.DOLBOMI;
 
 const B2 = {
   bg: '#0e1013', card: '#15181c', line: 'rgba(255,255,255,0.07)',

@@ -74,7 +74,7 @@ Let me read the UI kit and the data catalog to understand the components and opp
 
 _[tool: read_file]_
 
-Let me read the data catalog (opportunities) and tempo-data to understand what images would be relevant.
+Let me read the data catalog (opportunities) and dolbomi-data to understand what images would be relevant.
 
 _[tool: questions_v2]_
 

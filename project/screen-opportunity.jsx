@@ -3,7 +3,7 @@
 // summary that opens the full structured plan as its own tab.
 (function () {
 const { Icon, Card, Tag, Btn, SectionHeader, IconChip, ProgressBar, STATUS } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 // per-opp header treatment — keep color restrained + text on glass.
 //   photo  → grayscale + subtle category tint    pattern → generated field    mark → lettermark

@@ -2,7 +2,7 @@
 // monthly recap preview. Replaces the lonely single "월간 결산" link.
 (function () {
 const { Icon, Card, Tag } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 const won = (n) => n >= 10000 ? `${(n / 10000).toFixed(n % 10000 ? 1 : 0)}만원` : `${n.toLocaleString()}원`;
 
 // visual identity per log type

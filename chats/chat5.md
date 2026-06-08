@@ -166,7 +166,7 @@ _[tool: done]_
 
 _[tool: fork_verifier_agent]_
 
-Done. Here's what changed across the TEMPO app:
+Done. Here's what changed across the DOLBOMI app:
 
 **Avatar habitat (the ram).** The guardian now stands in a misty 3D conifer grove — gradient sky, fog, two depth-layers of trees, drifting mist bands, and a warm glow pooled at its feet. The grove re-tints per path (green grove for 해치, river-blue for 청룡, ember for 봉황, dawn-gold for 백호).
 

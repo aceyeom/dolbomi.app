@@ -1,5 +1,5 @@
 // skin-tactical.jsx — Skin B: refined tactical dark (premium, matte, restrained)
-const { icon: tIcon, navIcon: tNav, nav: tNavItems, won: tWon, stats: tStats, soldier: tSoldier } = window.TEMPO;
+const { icon: tIcon, navIcon: tNav, nav: tNavItems, won: tWon, stats: tStats, soldier: tSoldier } = window.DOLBOMI;
 
 const TAC = {
   bg: '#0e1013', card: '#16191d', line: 'rgba(255,255,255,0.07)',

@@ -1,4 +1,4 @@
-# GitHub Tempo Repo
+# GitHub Dolbomi Repo
 
 _Started 2026-06-04 13:37 UTC_
 
@@ -6,7 +6,7 @@ _Started 2026-06-04 13:37 UTC_
 
 ## User
 
-reread the tempo github repo.
+reread the dolbomi github repo.
 
 ## Assistant
 
@@ -16,12 +16,12 @@ _[tool: list_files]_
 
 It seems your message came through empty. Could you clarify what you'd like me to do? For example:
 
-- Did you want me to **connect to a GitHub repo** for TEMPO? If so, please paste the GitHub URL.
-- Or did you want me to **re-read the existing project files** for TEMPO?
+- Did you want me to **connect to a GitHub repo** for DOLBOMI? If so, please paste the GitHub URL.
+- Or did you want me to **re-read the existing project files** for DOLBOMI?
 
 ## User
 
-read the updated frameworks here: https://github.com/aceyeom/tempo/tree/main
+read the updated frameworks here: https://github.com/aceyeom/dolbomi/tree/main
 
 ## Assistant
 
@@ -139,7 +139,7 @@ We are going to do a full UI overhall. Firstly, the overall design still looks c
 
 _[tool: questions_v2]_
 
-This is an exciting direction. A geometric Korean guardian creature rendered in Three.js as the emotional core of the app — evolving as the soldier levels up — could make TEMPO genuinely unforgettable. Before I touch anything, I need to lock the art direction and scope. Let me ask.
+This is an exciting direction. A geometric Korean guardian creature rendered in Three.js as the emotional core of the app — evolving as the soldier levels up — could make DOLBOMI genuinely unforgettable. Before I touch anything, I need to lock the art direction and scope. Let me ask.
 
 ## User
 
@@ -284,7 +284,7 @@ _[tool: str_replace_edit]_
 
 _[tool: str_replace_edit]_
 
-Data's in. Now the theme system — let me add light-theme token overrides and a shared `--track` token to `tempo-ui.jsx`.Now add light-theme overrides after the palette definitions:
+Data's in. Now the theme system — let me add light-theme token overrides and a shared `--track` token to `dolbomi-ui.jsx`.Now add light-theme overrides after the palette definitions:
 
 _[tool: str_replace_edit]_
 
@@ -566,7 +566,7 @@ The app didn't render — only the static caption shows, the device frame is gon
 
 _[tool: show_to_user]_
 
-Those are transient script-load failures (several `.jsx` files failed to fetch on that reload, cascading to `TEMPO` undefined) — not my edit. Let me reload cleanly and retry:
+Those are transient script-load failures (several `.jsx` files failed to fetch on that reload, cascading to `DOLBOMI` undefined) — not my edit. Let me reload cleanly and retry:
 
 _[tool: sleep]_
 

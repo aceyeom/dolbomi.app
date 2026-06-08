@@ -1,7 +1,7 @@
 // screen-ai.jsx — 분대장 AI companion chat + Sunday Letter entry.
 (function () {
 const { Ic, Card } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function AIScreen({ onOpenLetter }) {
   const [msgs, setMsgs] = React.useState(T.aiSeed.map((m, i) => ({ ...m, id: 'seed' + i })));

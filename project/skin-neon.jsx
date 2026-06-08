@@ -1,5 +1,5 @@
 // skin-neon.jsx — Skin A: 상태창 / Solo-Leveling neon HUD
-const { icon, navIcon, nav, won, stats, soldier, quests } = window.TEMPO;
+const { icon, navIcon, nav, won, stats, soldier, quests } = window.DOLBOMI;
 
 const NEON = {
   cyan: '#39e6ff', violet: '#9b7bff', magenta: '#ff5cab',

@@ -3,7 +3,7 @@
 // app-shell and passed in, so the detail screen and this plan stay in sync.
 (function () {
 const { Icon, Card, Tag, Btn, SectionHeader, ProgressBar, STATUS } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 const SIZE_MIN = { S: '5분', M: '20분', L: '45분' };
 
 // derive fill / pacing / status from a working milestone array

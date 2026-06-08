@@ -1,5 +1,5 @@
 // skin-terminal.jsx — Skin D: 전술 단말기 / CRT phosphor terminal
-const { navIcon: kNav, nav: kNavItems, won: kWon, stats: kStats, soldier: kSoldier, quests: kQuests } = window.TEMPO;
+const { navIcon: kNav, nav: kNavItems, won: kWon, stats: kStats, soldier: kSoldier, quests: kQuests } = window.DOLBOMI;
 
 const TRM = {
   bg: '#04100a', green: '#3dffa0', dim: 'rgba(61,255,160,0.45)',
@@ -36,7 +36,7 @@ function TrmScreen() {
 
       <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', padding: '10px 18px 0' }}>
         {/* boot header */}
-        <TrmRow style={{ color: TRM.dim, fontSize: 10.5, letterSpacing: 1 }}>┌─ TEMPO//STATUS_TERMINAL ───── v3 ─┐</TrmRow>
+        <TrmRow style={{ color: TRM.dim, fontSize: 10.5, letterSpacing: 1 }}>┌─ DOLBOMI//STATUS_TERMINAL ───── v3 ─┐</TrmRow>
         <div style={{ display: 'flex', justifyContent: 'space-between', margin: '8px 0 2px' }}>
           <TrmRow style={{ fontSize: 13, fontWeight: 600 }}>{kSoldier.rank} {kSoldier.name}</TrmRow>
           <TrmRow style={{ color: TRM.amber, fontSize: 12 }}>[칭호:{kSoldier.title}]</TrmRow>

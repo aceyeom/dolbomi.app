@@ -1,7 +1,7 @@
 // screen-squad.jsx — 분대 (Squad) + 익명 고충 벽 (Anonymous Wall).
 (function () {
 const { Ic, Card, SectionTitle, Pill } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 function SquadScreen() {
   const [tab, setTab] = React.useState('squad');

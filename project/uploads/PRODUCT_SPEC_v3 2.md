@@ -1,6 +1,6 @@
 # 멈추지 않는 시간 (The Time That Doesn't Stop)
 ### Comprehensive Product Specification — v3, rebuilt from the user's emotional reality
-> ROK military self-development platform | Working codename: **TEMPO** | Jun 2026
+> ROK military self-development platform | Working codename: **DOLBOMI** | Jun 2026
 
 ---
 
@@ -31,7 +31,7 @@ That's a mechanic, not a reason to care. Gamification is the skin. It is not why
 
 **The new premise:**
 
-> **TEMPO is the proof that your 18 months were not stolen.**
+> **DOLBOMI is the proof that your 18 months were not stolen.**
 >
 > It turns the time the army takes from you into time you took back — and at the end, it hands you the receipt: undeniable evidence of who you became, so you walk out ahead instead of behind.
 
@@ -47,13 +47,13 @@ This reframes every feature:
 
 The user asked for this to serve all three personas. The "wasted time" frame is the only frame that does, because all three share the same underlying fear:
 
-| Persona | Surface motivation | Shared deep fear | How TEMPO answers |
+| Persona | Surface motivation | Shared deep fear | How DOLBOMI answers |
 |---------|-------------------|------------------|-------------------|
 | The bored conscript | "I want to look cool / kill time" | "I'm wasting my youth in here" | Makes progress visible and shareable — boredom becomes momentum |
 | The anxious soldier | "I'm scared I'm falling behind" | "I'll come out worse than I went in" | Turns formless anxiety into a concrete, daily-shrinking gap |
 | The disciplined self-improver | "I want to maximize this time" | "I'll lose my edge / forget my plan" | Gives structure, compounding records, and a path to real-world wins |
 
-The bored one and the disciplined one are not different users. They are the same user on different days. TEMPO has to work on the exhausted, demoralized day — which is why the emotional frame, not the game mechanic, has to carry it.
+The bored one and the disciplined one are not different users. They are the same user on different days. DOLBOMI has to work on the exhausted, demoralized day — which is why the emotional frame, not the game mechanic, has to carry it.
 
 ---
 
@@ -61,7 +61,7 @@ The bored one and the disciplined one are not different users. They are the same
 
 "전술 성장" and "Jeonseul Seongjang" are descriptive but emotionally flat — they describe a mechanic (tactical growth). The product needs a name that carries the *time* idea.
 
-### Recommended: **TEMPO** (템포)
+### Recommended: **DOLBOMI** (템포)
 - Latin/musical root: the rate at which time passes, the pace you set.
 - Implies *you* control the rhythm of your own 18 months — the army doesn't.
 - Short, English-friendly (works on a global pivot), pronounceable in Korean (템포).
@@ -74,7 +74,7 @@ The bored one and the disciplined one are not different users. They are the same
 | D-Day (디데이) | The countdown everyone already lives by | Too generic, undifferentiated, no ownership |
 | 복무일지 | "Service log" | Sounds like a government form |
 | 전역각 | Military slang for "discharge is near" | Funny but only resonates with one mood |
-| **TEMPO** | "Your pace, your time" | **Winner — emotional, short, scalable** |
+| **DOLBOMI** | "Your pace, your time" | **Winner — emotional, short, scalable** |
 
 ---
 
@@ -161,7 +161,7 @@ Bite-size financial education quests (ETF, compound interest, 청약, 전세 vs 
 
 ### C. "I'm building a real future" — the opportunity engine (NEW — the user's key request)
 
-This is the entirely new pillar the user asked for: don't just track self-development, **connect it to real-world opportunities.** This is what makes TEMPO more than a habit tracker — it becomes a launchpad.
+This is the entirely new pillar the user asked for: don't just track self-development, **connect it to real-world opportunities.** This is what makes DOLBOMI more than a habit tracker — it becomes a launchpad.
 
 **C1. Opportunity Radar (기회 레이더) [MOAT]**
 A curated, always-current feed of real programs soldiers are eligible for, surfaced based on their stat profile and goals. Built from public data:
@@ -235,7 +235,7 @@ The frame is "we prove your time counted." Money should never feel like it's tax
 
 | Line | Timing | What's paid | Why it doesn't break trust |
 |------|--------|-------------|----------------------------|
-| **TEMPO+ subscription** ₩4,900/mo | During service | AI companion (unlimited), Sunday Letter, 5-min library, adaptive coaching | The intelligence is the premium; the tracking is free |
+| **DOLBOMI+ subscription** ₩4,900/mo | During service | AI companion (unlimited), Sunday Letter, 5-min library, adaptive coaching | The intelligence is the premium; the tracking is free |
 | **Cert prep affiliate** | During service | Links to 에듀윌/해커스 courses, reimbursed via the ₩120K gov budget | User spends government money, not their own |
 | **Sponsored quests** | During service | Brands fund quest tracks w/ real rewards (CU 상품권, etc.) | Soldier gets real value; it's a gift, not an ad |
 | **Discharge Pack** ₩29,000 | At D-30 (one-time) | Full Receipt PDF + résumé templates + 30-day post-discharge quest pack | Sold at peak motivation, to people who got real value |

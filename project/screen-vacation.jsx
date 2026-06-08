@@ -3,7 +3,7 @@
 //   추천 (the single best next pick) · 진행 중 (active climbs) · 그 외 가능 (not started yet).
 (function () {
 const { Icon, Card, Tag, ProgressBar, STATUS } = window.TU;
-const T = window.TEMPO;
+const T = window.DOLBOMI;
 
 // upper-bound days per opp (for the honest "최대" headline)
 const MAXD = { startup: 5, toeic: 5, hanguksa: 3, cheryeok: 3, defai: 4 };
