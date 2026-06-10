@@ -73,7 +73,7 @@ function GuardianHero({ soldier, stats, creaturePath, creatureAnimal = 'ram', mi
           {PATHS.map((p) => {
             const on = p.key === creaturePath;
             return (
-              <button key={p.key} onClick={() => { onPickPath && onPickPath(p.ko); setPicking(false); }} className="tm-tap"
+              <button key={p.key} onClick={() => { onPickPath && onPickPath(p.key); setPicking(false); }} className="tm-tap"
                 style={{ width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                   display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10,
                   background: on ? 'rgba(var(--accent-rgb),.16)' : 'transparent' }}>

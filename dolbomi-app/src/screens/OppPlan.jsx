@@ -3,6 +3,7 @@ import { Icon } from '../icons';
 import { Card, Tag, Btn, SectionHeader, ProgressBar } from '../components/ui';
 import { STAT_C, STATUS } from '../icons';
 import { stats, cats } from '../data';
+import { share } from '../util/share';
 
 const SIZE_MIN = { S: '5분', M: '20분', L: '45분' };
 
@@ -59,15 +60,15 @@ export function OppProgressBar({ o, ms }) {
         <button onClick={() => setReplanned(true)} className="tm-tap" style={{ marginTop: 14, width: '100%', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px', borderRadius: 'var(--r-md)',
           background: `rgba(${d.st.rgb},.12)`, color: d.st.c, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, boxShadow: `inset 0 0 0 1px rgba(${d.st.rgb},.3)` }}>
-          {Icon('replan', { size: 16, color: d.st.c, stroke: 2 })} 마감까지 다시 짜기 (AI 재계획)
+          {Icon('replan', { size: 16, color: d.st.c, stroke: 2 })} 남은 기간 기준으로 다시 보기
         </button>
       )}
       {replanned && (
         <div style={{ marginTop: 14, padding: '11px 13px', borderRadius: 'var(--r-md)', background: 'rgba(var(--positive-rgb),.1)', boxShadow: 'inset 0 0 0 1px rgba(var(--positive-rgb),.28)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, color: 'var(--positive)' }}>
-            {Icon('sparkle', { size: 15, color: 'var(--positive)', stroke: 2 })} 경로를 다시 짰어
+            {Icon('sparkle', { size: 15, color: 'var(--positive)', stroke: 2 })} 남은 {o.dday}일 기준
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--sub)', marginTop: 4, lineHeight: 1.45 }}>남은 {o.dday}일에 맞춰 더 작은 단계로 재배치. 오늘 밤부터 따라오면 마감 가능.</div>
+          <div style={{ fontSize: 11.5, color: 'var(--sub)', marginTop: 4, lineHeight: 1.45 }}>지금 페이스를 마감까지로 환산한 목표선이야. 아래 단계를 하나씩 끝내면 따라잡아.</div>
         </div>
       )}
     </Card>
@@ -120,6 +121,8 @@ function SubQuest({ s, onToggle }) {
 
 export function OppPlan({ o, ms, onToggle, onAddTonight }) {
   const cat = cats[o.cat] || { c: 'var(--accent)', icon: 'flag' };
+  const locked = !!o.locked;
+  const toggle = locked ? () => {} : onToggle;
   const [open, setOpen] = useState(() => {
     const firstUndone = ms.find((m) => m.subquests.some((s) => !s.done));
     return firstUndone ? firstUndone.id : ms[0].id;
@@ -127,6 +130,15 @@ export function OppPlan({ o, ms, onToggle, onAddTonight }) {
 
   return (
     <div className="tm-rise">
+      {locked && (
+        <Card pad={14} style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 11, boxShadow: 'inset 0 0 0 1px rgba(var(--accent-rgb),.3)' }}>
+          {Icon('shield', { size: 18, color: 'var(--accent)', stroke: 2 })}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>전역 D-{o.unlockDday} 구간에 해금</div>
+            <div style={{ fontSize: 11, color: 'var(--sub)', marginTop: 2 }}>지금은 미리보기 · 해금되면 단계를 완료할 수 있어</div>
+          </div>
+        </Card>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <div style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: `${cat.c}1f`, boxShadow: `inset 0 0 0 1px ${cat.c}55` }}>
@@ -162,7 +174,7 @@ export function OppPlan({ o, ms, onToggle, onAddTonight }) {
               </button>
               {isOpen && (
                 <div style={{ padding: '0 15px 8px', display: 'flex', flexDirection: 'column' }}>
-                  {m.subquests.map((s) => <SubQuest key={s.id} s={s} onToggle={(v) => onToggle(m.id, s.id, v)} />)}
+                  {m.subquests.map((s) => <SubQuest key={s.id} s={s} onToggle={(v) => toggle(m.id, s.id, v)} />)}
                 </div>
               )}
             </Card>
@@ -172,7 +184,7 @@ export function OppPlan({ o, ms, onToggle, onAddTonight }) {
 
       <Btn icon="plus" onClick={onAddTonight}>오늘 밤의 3에 추가</Btn>
       <div style={{ height: 10 }} />
-      <Btn tone="ghost" icon="share" onClick={() => {}}>친구에게 같이 하자고 보내기</Btn>
+      <Btn tone="ghost" icon="share" onClick={() => share(`${o.title} 같이 도전하자! DOLBOMI에서 ${o.reward.finish} 노리는 중.`)}>친구에게 같이 하자고 보내기</Btn>
     </div>
   );
 }

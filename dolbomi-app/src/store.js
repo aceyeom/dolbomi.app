@@ -1,8 +1,8 @@
-// Global store (zustand) for the live, per-soldier data served by the API.
-// Screens read dynamic data (soldier, stats, tonight, catalog, …) from here.
-// Static presentation config (cats, moods, benefitFilters, wrapped copy) still
-// comes from src/data. If the API is unreachable, we fall back to the static
-// data module so the app stays fully usable offline.
+// Global store (zustand). Holds the live per-user snapshot plus auth + prefs.
+//
+// Online: Supabase Auth session → fetchSnapshot() (reference data ⨯ per-user
+// state) and SECURITY DEFINER RPCs for writes. Offline (no Supabase env, or a
+// failed network): the bundled src/data fallback so the app stays usable.
 import { create } from 'zustand';
 import * as api from './api/client';
 import * as staticData from './data';
@@ -13,38 +13,108 @@ const OFFLINE_SNAPSHOT = {
   tonight: staticData.tonight,
   catalog: staticData.catalog,
   benefits: staticData.benefits,
-  titles: staticData.titles,
+  titles: staticData.offlineTitles,
   vacation: staticData.vacation,
   activity: staticData.activity,
 };
 
+const PREFS_KEY = 'dolbomi_prefs';
+const DEFAULT_PREFS = { theme: 'dark', palette: '골드', path: 'haechi' };
+function loadPrefs() {
+  try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; }
+  catch { return { ...DEFAULT_PREFS }; }
+}
+function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* ignore */ } }
+
+const SIZE = { S: { min: 5, xp: 2 }, M: { min: 20, xp: 3 }, L: { min: 45, xp: 5 } };
+
 export const useStore = create((set, get) => ({
   loaded: false,
   online: false,
+  authReady: false,
+  needsAuth: false,
+  session: null,
+  authError: null,
+  prefs: loadPrefs(),
+  mood: null,
   ...OFFLINE_SNAPSHOT,
 
-  // boot: get a session, load the snapshot. Fall back to static data offline.
+  // ── boot ───────────────────────────────────────────────────────────
   async bootstrap() {
-    try {
-      await api.ensureSession();
-      const snap = await api.getState();
-      set({ ...snap, loaded: true, online: true });
-    } catch {
-      set({ ...OFFLINE_SNAPSHOT, loaded: true, online: false });
+    if (!api.hasSupabase) {
+      // local dev / SSR with no cloud — straight to the offline demo
+      set({ ...OFFLINE_SNAPSHOT, loaded: true, online: false, authReady: true, needsAuth: false });
+      return;
     }
+    api.onAuthChange((session) => get()._onSession(session));
+    const session = await api.getSession().catch(() => null);
+    await get()._onSession(session);
+  },
+
+  async _onSession(session) {
+    set({ session, authReady: true });
+    if (session) {
+      try {
+        const snap = await api.fetchSnapshot();
+        const prefs = { ...get().prefs, ...(snap.prefs || {}) };
+        savePrefs(prefs);
+        set({ ...snap, prefs, mood: moodFromKey(snap.soldier?.lastMood), loaded: true, online: true, needsAuth: false, authError: null });
+      } catch {
+        // signed in but data load failed — surface offline rather than a blank app
+        set({ ...OFFLINE_SNAPSHOT, loaded: true, online: false, needsAuth: false });
+      }
+    } else {
+      set({ loaded: true, online: false, needsAuth: true });
+    }
+  },
+
+  async refresh() {
+    if (!get().online) return;
+    try {
+      const snap = await api.fetchSnapshot();
+      set({ ...snap });
+    } catch { /* keep current */ }
+  },
+
+  // ── auth actions ───────────────────────────────────────────────────
+  async signIn(email, password) {
+    set({ authError: null });
+    try { await api.signIn(email, password); return true; }
+    catch (e) { set({ authError: e.message || '로그인 실패' }); return false; }
+  },
+  async signUp(fields) {
+    set({ authError: null });
+    try {
+      await api.signUp(fields);
+      // if email confirmation is on, there is no session yet
+      const session = await api.getSession();
+      if (!session) { set({ authError: '확인 메일을 보냈어요. 메일의 링크를 누른 뒤 로그인하세요.' }); return false; }
+      return true;
+    } catch (e) { set({ authError: e.message || '가입 실패' }); return false; }
+  },
+  async signOut() {
+    await api.signOut();
+    set({ ...OFFLINE_SNAPSHOT, online: false, needsAuth: true, mood: null });
   },
 
   oppById: (id) => get().catalog.find((o) => o.id === id),
 
-  // mutations — optimistic locally, reconciled with the server response.
+  // ── prefs (theme / palette / guardian path) ────────────────────────
+  setPref(key, val) {
+    const prefs = { ...get().prefs, [key]: val };
+    set({ prefs });
+    savePrefs(prefs);
+    if (get().online) api.setPrefs({ [key]: val }).catch(() => {});
+  },
+
+  // ── mutations: optimistic local edit, then RPC + refetch ───────────
   async toggleTonight(id) {
     set((s) => ({ tonight: s.tonight.map((q) => (q.id === id ? { ...q, done: !q.done } : q)) }));
-    if (!get().online) return;
-    try { const r = await api.toggleTonight(id); if (r.tonight) set({ tonight: r.tonight }); } catch { /* keep optimistic */ }
+    if (!get().online) { applyLocalStat(set, get, tonightStat(get, id), tonightDelta(get, id)); return; }
+    try { await api.toggleTonight(id); await get().refresh(); } catch { /* keep optimistic */ }
   },
 
   async toggleSubquest(oppId, subId, verified) {
-    // optimistic flip in the local catalog
     set((s) => ({
       catalog: s.catalog.map((o) => o.id !== oppId ? o : {
         ...o,
@@ -55,17 +125,51 @@ export const useStore = create((set, get) => ({
       }),
     }));
     recomputeFill(set, get, oppId);
-    if (!get().online) return;
-    try { const r = await api.toggleSubquest(oppId, subId, verified); if (r.catalog) set({ catalog: r.catalog }); } catch { /* keep optimistic */ }
+    if (!get().online) { recomputeVacation(set, get); return; }
+    try { await api.toggleSubquest(oppId, subId, verified); await get().refresh(); } catch { /* keep optimistic */ }
+  },
+
+  async addTonight(oppId) {
+    if (!get().online) { addTonightLocal(set, get, oppId); return; }
+    try { await api.addTonight(oppId); await get().refresh(); } catch { /* ignore */ }
   },
 
   async checkin(mood, energy) {
+    set({ mood: moodFromKey(mood) });
     if (!get().online) return;
-    try { const r = await api.checkin(mood, energy); if (r.snapshot) set({ ...r.snapshot }); } catch { /* ignore */ }
+    try { await api.checkin(mood, energy); await get().refresh(); } catch { /* ignore */ }
+  },
+
+  async equipTitle(name) {
+    set((s) => ({
+      titles: s.titles.map((t) => ({ ...t, equipped: t.name === name && t.owned })),
+      soldier: { ...s.soldier, title: name },
+    }));
+    if (!get().online) return;
+    try { await api.equipTitle(name); await get().refresh(); } catch { get().refresh(); }
   },
 }));
 
-// keep an opportunity's fill% in sync after an optimistic local toggle
+// ── helpers ──────────────────────────────────────────────────────────
+function moodFromKey(key) {
+  if (!key) return null;
+  return staticData.moods.find((m) => m.key === key) || null;
+}
+
+function tonightStat(get, id) { return get().tonight.find((q) => q.id === id)?.stat; }
+function tonightDelta(get, id) {
+  const q = get().tonight.find((x) => x.id === id);
+  return q ? (q.done ? q.xp : -q.xp) : 0; // q.done already reflects the optimistic flip
+}
+
+function applyLocalStat(set, get, statKey, delta) {
+  if (!statKey || !delta) return;
+  set((s) => ({
+    stats: s.stats.map((st) => st.key !== statKey ? st
+      : { ...st, cur: Math.max(0, Math.min(staticData.STAT_CAP, st.cur + delta)) }),
+  }));
+}
+
 function recomputeFill(set, get, oppId) {
   set((s) => ({
     catalog: s.catalog.map((o) => {
@@ -76,4 +180,24 @@ function recomputeFill(set, get, oppId) {
       return { ...o, fill: Math.round((got / tot) * 100) };
     }),
   }));
+}
+
+function recomputeVacation(set, get) {
+  const vacOpps = get().catalog.filter((o) => o.reward.kind === '휴가');
+  const secured = vacOpps.reduce((n, o) => {
+    const allDone = o.milestones.every((m) => m.subquests.every((s) => s.done));
+    return n + (allDone ? (o.reward.maxDays || 0) : 0);
+  }, 0);
+  set({ vacation: { secured, ladder: vacOpps.map((o) => ({ id: o.id, title: o.title, days: o.reward.finish, fill: o.fill, status: o.status, note: o.reward.note })) } });
+}
+
+function addTonightLocal(set, get, oppId) {
+  const o = get().catalog.find((x) => x.id === oppId);
+  if (!o) return;
+  const next = o.milestones.flatMap((m) => m.subquests).find((s) => !s.done);
+  if (!next) return;
+  const txt = next.text;
+  if (get().tonight.some((q) => q.txt === txt && !q.done)) return;
+  const sz = SIZE[next.size] || SIZE.M;
+  set((s) => ({ tonight: [...s.tonight, { id: `local-${Date.now()}`, stat: next.stat, txt, min: sz.min, xp: sz.xp, hard: next.size === 'L', done: false }] }));
 }

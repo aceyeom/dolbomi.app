@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, ProgressBar, IconChip } from '../components/ui';
 import { STATUS } from '../icons';
-import { cats } from '../data';
+import { cats, radarCats } from '../data';
 import { useStore } from '../store';
 
-export function RadarScreen({ onOpenOpp }) {
+export function RadarScreen({ onOpenOpp, soldier }) {
   const catalog = useStore((s) => s.catalog);
+  const storeSoldier = useStore((s) => s.soldier);
+  const me = soldier || storeSoldier;
   const [filter, setFilter] = useState('전체');
-  const catList = ['전체', '대회', '자격증', '어학', '금융', '체력'];
+  const catList = radarCats;
   const list = filter === '전체' ? catalog : catalog.filter((o) => o.cat === filter);
-  const urgent = catalog.filter((o) => o.dday <= 14).length;
+  const urgent = catalog.filter((o) => !o.locked && o.dday <= 14).length;
 
   return (
     <div className="tm-rise">
@@ -19,7 +21,7 @@ export function RadarScreen({ onOpenOpp }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700 }}>너에게 맞는 기회 {catalog.length}개</div>
           <div style={{ fontSize: 11.5, color: 'var(--sub)', marginTop: 2 }}>
-            육군 · 상병 프로필 기준 · <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{urgent}개 마감 임박</span>
+            {(me?.branch || '육군')} · {(me?.rank || '병사')} 프로필 기준 · <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{urgent}개 마감 임박</span>
           </div>
         </div>
       </Card>
@@ -47,7 +49,7 @@ function OppCard({ o, onClick }) {
   const cc = (cats[o.cat] || { c: 'var(--accent)' }).c;
   const st = STATUS[o.status];
   const next = o.milestones.flatMap((m) => m.subquests).find((s) => !s.done);
-  const urgent = o.dday <= 14;
+  const urgent = !o.locked && o.dday <= 14;
   const rIcon = o.reward.kind === '휴가' ? 'palm' : o.reward.kind === 'money' ? 'wallet' : o.reward.kind === 'cert' ? 'medal' : 'trophy';
   return (
     <Card onClick={onClick} pad={0} style={{ overflow: 'hidden' }}>
@@ -61,8 +63,15 @@ function OppCard({ o, onClick }) {
             <span style={{ width: 6, height: 6, borderRadius: 999, background: cc }} />{o.cat}
           </span>
           {o.hot && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: '#fff', padding: '4px 8px', borderRadius: 999, background: 'rgba(var(--accent-rgb),.92)' }}>{Icon('flame', { size: 11, color: '#fff', stroke: 2.4 })}주목</span>}
-          <span className="mono" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#fff',
-            padding: '4px 9px', borderRadius: 999, background: urgent ? 'rgba(var(--accent-rgb),.94)' : 'rgba(10,11,13,.52)' }}>D-{o.dday}</span>
+          {o.locked ? (
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#fff',
+              padding: '4px 9px', borderRadius: 999, background: 'rgba(10,11,13,.62)' }}>
+              {Icon('shield', { size: 11, color: '#fff', stroke: 2.2 })}D-{o.unlockDday} 해금
+            </span>
+          ) : (
+            <span className="mono" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#fff',
+              padding: '4px 9px', borderRadius: 999, background: urgent ? 'rgba(var(--accent-rgb),.94)' : 'rgba(10,11,13,.52)' }}>D-{o.dday}</span>
+          )}
         </div>
         <div style={{ position: 'absolute', left: 14, right: 14, bottom: 12 }}>
           <div style={{ fontSize: 17.5, fontWeight: 800, letterSpacing: '-.02em', color: '#fff', textShadow: '0 1px 14px rgba(0,0,0,.55)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.title}</div>
