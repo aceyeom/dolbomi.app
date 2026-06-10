@@ -12,11 +12,10 @@ dist
 dist-ssr
 *.local
 
-# backend (SQLite db files + test artifacts)
-server/dolbomi.db
-server/dolbomi.db-wal
-server/dolbomi.db-shm
-server/test/test.db*
+# env (Supabase keys live here for local dev; never commit)
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

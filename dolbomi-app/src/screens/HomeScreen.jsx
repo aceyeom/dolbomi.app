@@ -3,7 +3,25 @@ import { Card, Tag, SectionHeader, IconChip } from '../components/ui';
 import { GuardianHero } from '../components/creature/GuardianCard';
 import { StatRow } from '../components/SkillDetail';
 
-export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenCheckin, mood, statMode, showAi, creaturePath, creatureAnimal, pulseSignal, milestones, onPickPath, onOpenOpp, onOpenAvatar }) {
+// "오늘의 한 줄" — derived from real data, not a hardcoded sentence (LOGIC-GAPS C1).
+function aiLine(soldier, quests, stats, catalog) {
+  const doneToday = quests.filter((q) => q.done);
+  const topStat = doneToday.length
+    ? stats.find((s) => s.key === doneToday[doneToday.length - 1].stat)
+    : null;
+  // nearest started, unfinished opportunity by D-day
+  const near = (catalog || [])
+    .filter((o) => o.started && !o.locked && o.fill < 100)
+    .sort((a, b) => a.dday - b.dday)[0];
+  const head = soldier.streak >= 3 ? `${soldier.streak}일 연속` : '오늘도';
+  const statPart = topStat
+    ? <><span style={{ color: 'var(--ink)', fontWeight: 700 }}>{topStat.mil}</span> 채웠다. </>
+    : '한 걸음 더. ';
+  const tail = near ? `${near.title}까지 D-${near.dday}, 페이스 좋아.` : '전역 목표가 가까워지고 있어.';
+  return <>"{head} {statPart}{tail}"</>;
+}
+
+export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenCheckin, mood, statMode, showAi, creaturePath, creatureAnimal, pulseSignal, milestones, onPickPath, onOpenOpp, onOpenAvatar, catalog }) {
   const done = quests.filter((q) => q.done).length;
 
   return (
@@ -53,9 +71,9 @@ export function HomeScreen({ soldier, stats, quests, onToggleQuest, onOpenChecki
           <IconChip name="sparkle" tone="accent" size={26} r={8} stroke={1.7} />
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(242,244,246,.85)', textWrap: 'pretty' }}>
-              "{soldier.streak >= 3 ? '3일 연속' : '오늘도'} <span style={{ color: 'var(--ink)', fontWeight: 700 }}>숙련도</span> 채웠다. 정보처리 필기까지 D-12, 페이스 좋아."
+              {aiLine(soldier, quests, stats, catalog)}
             </p>
-            <div style={{ fontSize: 10.5, color: 'var(--faint)', marginTop: 3 }}>오늘의 한 줄 · 21:04</div>
+            <div style={{ fontSize: 10.5, color: 'var(--faint)', marginTop: 3 }}>오늘의 한 줄</div>
           </div>
         </div>
       )}

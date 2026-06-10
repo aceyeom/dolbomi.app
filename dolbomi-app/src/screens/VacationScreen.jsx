@@ -3,8 +3,6 @@ import { Card, Tag, ProgressBar } from '../components/ui';
 import { STATUS } from '../icons';
 import { useStore } from '../store';
 
-const MAXD = { startup: 5, toeic: 5, hanguksa: 3, cheryeok: 3, defai: 4 };
-
 export function VacationScreen({ onOpenOpp }) {
   const catalog = useStore((s) => s.catalog);
   const vacation = useStore((s) => s.vacation);
@@ -19,7 +17,7 @@ export function VacationScreen({ onOpenOpp }) {
   })[0];
   const inProgress = started.filter((o) => o.id !== (recommended && recommended.id));
 
-  const maxAdd = started.reduce((a, o) => a + (MAXD[o.id] || 0), 0);
+  const maxAdd = started.reduce((a, o) => a + (o.reward.maxDays || 0), 0);
   const secured = vacation.secured;
 
   return (

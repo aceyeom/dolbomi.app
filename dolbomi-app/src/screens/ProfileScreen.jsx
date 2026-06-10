@@ -1,3 +1,4 @@
+import { Icon } from '../icons';
 import { Card, SectionHeader } from '../components/ui';
 import { useStore } from '../store';
 import { GuardianHero, evolutionOf } from '../components/creature/GuardianCard';
@@ -5,8 +6,9 @@ import { StatRow } from '../components/SkillDetail';
 import { BadgeCard } from '../components/Badges';
 import { ActivityLog } from '../components/ActivityLog';
 
-export function ProfileScreen({ soldier, stats, statMode, onOpen, creaturePath, creatureAnimal, milestones, pulseSignal, onPickPath, onOpenOpp, onOpenAvatar }) {
+export function ProfileScreen({ soldier, stats, statMode, onOpen, creaturePath, creatureAnimal, milestones, pulseSignal, onPickPath, onOpenOpp, onOpenAvatar, onOpenSettings }) {
   const titles = useStore((s) => s.titles);
+  const equipTitle = useStore((s) => s.equipTitle);
   const owned = titles.filter((t) => t.owned).length;
   const evo = evolutionOf(stats);
 
@@ -37,13 +39,21 @@ export function ProfileScreen({ soldier, stats, statMode, onOpen, creaturePath, 
         </div>
       </Card>
 
-      <SectionHeader right={`${owned} / ${titles.length}`} caption="임무와 기록이 새겨진 문장">칭호</SectionHeader>
+      <SectionHeader right={`${owned} / ${titles.length}`} caption="보유한 칭호를 탭하면 착용 · 임무와 기록이 새겨진 문장">칭호</SectionHeader>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-        {titles.map((t) => <BadgeCard key={t.name} t={t} />)}
+        {titles.map((t) => <BadgeCard key={t.name} t={t} onEquip={() => equipTitle(t.name)} />)}
       </div>
 
       <SectionHeader caption="이번 달 결산과 최근 활동 기록">기록</SectionHeader>
       <ActivityLog onOpenRecap={() => onOpen('wrapped')} />
+
+      <button onClick={onOpenSettings} className="tm-tap" style={{ width: '100%', marginTop: 16, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+        display: 'flex', alignItems: 'center', gap: 10, padding: '14px 15px', borderRadius: 'var(--r-md)',
+        background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line)', color: 'var(--sub)', fontSize: 13.5, fontWeight: 700 }}>
+        {Icon('sliders', { size: 17, color: 'var(--sub)', stroke: 2 })}
+        <span style={{ flex: 1, textAlign: 'left' }}>설정 · 테마 · 수호신 · 계정</span>
+        {Icon('chevR', { size: 16, color: 'var(--faint)' })}
+      </button>
     </div>
   );
 }

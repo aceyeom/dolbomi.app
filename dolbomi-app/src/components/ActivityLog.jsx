@@ -54,6 +54,7 @@ function ActivityLog({ onOpenRecap }) {
   const shown = expanded ? all : all.slice(0, 5);
   const w = wrapped;
   const maxWeek = Math.max(...(w.weekly || [1]));
+  const questCount = all.filter((e) => e.type === 'quest').length; // derived, not hardcoded (J2)
 
   return (
     <div>
@@ -79,7 +80,7 @@ function ActivityLog({ onOpenRecap }) {
           ))}
           <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--hair)', margin: '4px 4px 16px' }} />
           <div style={{ flexShrink: 0, textAlign: 'right', alignSelf: 'center' }}>
-            <div className="num" style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>{w.quests}</div>
+            <div className="num" style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>{questCount}</div>
             <div style={{ fontSize: 9.5, color: 'var(--faint)', marginTop: 2 }}>완료 퀘스트</div>
           </div>
         </div>

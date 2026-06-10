@@ -1,8 +1,9 @@
 import React from 'react';
 import { Icon, STAT_C } from '../icons';
 import { Card, Btn, Tag } from './ui';
-import { moods, energy, wrapped, won } from '../data';
+import { moods, energy, wrapped } from '../data';
 import { useStore } from '../store';
+import { share } from '../util/share';
 
 function SheetShell({ children, onClose }) {
   return (
@@ -132,12 +133,19 @@ function QuestComplete({ quest, guardianName, onClose }) {
 
 function Wrapped() {
   const stats = useStore((s) => s.stats);
+  const activity = useStore((s) => s.activity) || [];
+  const vacation = useStore((s) => s.vacation);
   const w = wrapped;
+  // derive the recap headline numbers from real activity (LOGIC-GAPS J2)
+  const questEntries = activity.filter((a) => a.type === 'quest');
+  const questCount = questEntries.length;
+  const xpEarned = activity.reduce((n, a) => n + (a.xp || 0), 0);
+  const topMil = (stats.reduce((best, s) => (s.cur > (best?.cur ?? -1) ? s : best), null) || {}).mil || w.topStat.mil;
   const items = [
-    { icon: 'check', big: w.quests + '개', label: '완료한 퀘스트' },
-    { icon: 'body', big: '+' + w.topStat.gain, label: w.topStat.mil + ' 상승' },
-    { icon: 'wallet', big: '+' + won(w.savings), label: '적금 증가' },
-    { icon: 'palm', big: '+3일', label: '휴가 사다리' },
+    { icon: 'check', big: questCount + '개', label: '완료한 퀘스트' },
+    { icon: 'zap', big: '+' + xpEarned, label: '획득 경험치' },
+    { icon: 'trophy', big: topMil, label: '최고 능력치' },
+    { icon: 'palm', big: '+' + (vacation?.secured ?? 0) + '일', label: '확보한 휴가' },
   ];
   return (
     <div className="tm-rise">
@@ -186,7 +194,9 @@ function Wrapped() {
           </div>
         </div>
       </Card>
-      <div style={{ marginTop: 14 }}><Btn icon="flag">카톡에 공유</Btn></div>
+      <div style={{ marginTop: 14 }}>
+        <Btn icon="share" onClick={() => share(`이번 달 DOLBOMI 결산 — 완료 ${questCount}개, ${topMil} 최고치. 너도 복무를 성장으로 바꿔봐.`)}>결산 공유</Btn>
+      </div>
     </div>
   );
 }

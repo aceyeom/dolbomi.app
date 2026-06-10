@@ -115,12 +115,13 @@ function BadgeCrest({ t, size = 78 }) {
   );
 }
 
-function BadgeCard({ t }) {
+function BadgeCard({ t, onEquip }) {
   const owned = !!t.owned;
   const legendary = !!t.legendary;
   const accent = legendary ? '#caa6ff' : 'var(--accent)';
+  const canEquip = owned && !t.equipped && onEquip;
   return (
-    <Card pad={0} glow={legendary && owned} style={{ overflow: 'hidden',
+    <Card pad={0} glow={legendary && owned} onClick={canEquip ? onEquip : undefined} style={{ overflow: 'hidden',
       background: owned ? 'linear-gradient(180deg, rgba(var(--accent-rgb),.05), var(--surface))' : 'var(--surface)' }}>
       <div style={{ padding: '15px 12px 13px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         {t.equipped && (
@@ -136,6 +137,9 @@ function BadgeCard({ t }) {
         <div style={{ marginTop: 10, fontSize: 13.5, fontWeight: 800, letterSpacing: '-.01em',
           color: owned ? (legendary ? accent : 'var(--ink)') : 'var(--faint)' }}>{t.name}</div>
         <div style={{ fontSize: 10.5, color: 'var(--faint)', marginTop: 3, lineHeight: 1.35, textWrap: 'pretty' }}>{t.desc}</div>
+        {canEquip && (
+          <div style={{ marginTop: 7, fontSize: 9.5, fontWeight: 700, color: 'var(--accent)' }}>탭하면 착용</div>
+        )}
       </div>
     </Card>
   );

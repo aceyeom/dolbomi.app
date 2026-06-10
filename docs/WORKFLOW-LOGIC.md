@@ -1,5 +1,11 @@
 # DOLBOMI — Workflow & Logic
 
+> **Historical note:** this document describes the pre-migration app (Express +
+> SQLite, demo-only login). The "Actual" ❌/⚠️ notes were the starting point; most
+> are now resolved on the Vercel + Supabase stack — see the **Resolution status**
+> table in [LOGIC-GAPS.md](./LOGIC-GAPS.md) and [ARCHITECTURE.md](./ARCHITECTURE.md)
+> for current behaviour. Kept here as the record of design intent.
+
 This walks every core loop **as designed (intended)** vs **as implemented (actual)**.
 It is deliberately logic-heavy. Each "Actual" note links to the corresponding entry
 in [LOGIC-GAPS.md](./LOGIC-GAPS.md) where a fix is described.

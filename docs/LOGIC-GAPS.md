@@ -1,15 +1,65 @@
 # DOLBOMI — Logic Gaps & Things to Fix
 
 The catalogue of **broken, non-functional, dead, or misleading logic** in
-`dolbomi-app/`. This is the implementation backlog implied by the brief
+`dolbomi-app/`. This was the implementation backlog implied by the brief
 ("various components… just a visual unfunctional wrapper… all the logical
-loopholes"). Nothing here has been changed — this is analysis only.
+loopholes").
+
+> **Most of this has now been fixed** as part of the Vercel + Supabase
+> migration. See the **Resolution status** below for what's done, partial, or
+> deliberately deferred. The original catalogue is kept underneath as the record
+> of *why* each change was made. Note that the file references in the catalogue
+> predate the migration (the Express `server/` was removed; write logic now lives
+> in `supabase/migrations/0002_functions.sql`, read assembly in
+> `dolbomi-app/src/api/client.js`).
 
 **Severity:** 🔴 core loop broken / claim is false · 🟠 feature non-functional ·
 🟡 misleading / partial / stale · ⚪ cosmetic / cleanup.
 
-Each item: **Claim** (what the UI implies) → **Reality** (what the code does) →
-`file:line` → **Fix direction**.
+---
+
+## Resolution status (post-migration)
+
+✅ fixed · ◐ partial · ⏸ deferred (scope/cost)
+
+| Group | ✅ Fixed | ◐ Partial | ⏸ Deferred |
+| --- | --- | --- | --- |
+| **A. XP/Evolution** | A1, A2, A3, A4, A6, A7 | A5 (cur grows live, not a full history recompute) | — |
+| **B. Check-in/AI** | B1, B2, B3, B4 | — | B5 (no LLM; "AI" copy softened, not model-backed) |
+| **C. Fake AI** | C1, C3 | C2 ("재계획" relabelled to an honest view hint) | — |
+| **D. Quest creation** | D1 | D2 (add + complete; no edit/reorder/delete UI) | — |
+| **E. Verified bonus** | E1 (+50% XP) | — | — |
+| **F. Settings/Theme/Path** | F1, F2, F3, F4, F5, F6 | F8 (set at onboarding; no later edit UI) | F7 (4 paths → 2 models, cosmetic) |
+| **G. Accounts/Auth** | G1, G2, G3 (Supabase Auth) | — | — |
+| **H. Vacation** | H1, H2 | — | H3 (secured is real; days still informational) |
+| **I. Catalog/filters** | I1, I2, I3 | — | — |
+| **J. Titles/Recap/Share** | J1, J3, J4 | J2 (headline numbers derived; some recap copy static) | — |
+| **K. Persistence/sync** | K1, K2 (mutations refetch) | K3 (offline edits still memory-only) | — |
+| **L. Misc/data** | L1, L2 | — | L3 (status still client-derived; acceptable) |
+
+**How the headline fixes were made**
+- **Core loop (A):** `app_toggle_tonight` / `app_toggle_subquest` write
+  `stats.cur` (capped at 100) from reference XP, so evolution, gilding, the
+  profile radar, and the celebration all *move*.
+- **Adaptive day (B):** `app_checkin` enforces one streak bump per Asia/Seoul day
+  and regenerates 오늘 밤의 3 from `quest_pool` sized to the reported energy.
+- **Accounts (G):** Supabase Auth (email/password) + per-user RLS; sign-up
+  onboarding writes name/rank/branch/guardian path; `app_ensure_profile`
+  provisions a new user's rows.
+- **Settings/onboarding (F):** real `SettingsScreen` + `AuthScreen`; theme /
+  palette / path persist to the profile and `localStorage`.
+- **Honest copy / real behaviour (C, E, F6, J4):** the home line is derived, the
+  branch filter filters, verified completion pays a bonus, share uses the Web
+  Share API.
+- **Live data (H, I, J, K, L):** D-day decrements from real deadlines, D-90 opps
+  are gated, titles auto-award, recap numbers derive from activity, vacation
+  `secured` is real, `MAXD` is single-sourced, and the reference catalog is
+  generated from `src/data` so it can't drift.
+
+---
+
+Each item below: **Claim** (what the UI implied) → **Reality** (what the code did
+pre-migration) → `file:line` → **Fix direction**.
 
 Quick index:
 [A. XP/Evolution](#a-xp--leveling--evolution-the-core-broken-loop) ·

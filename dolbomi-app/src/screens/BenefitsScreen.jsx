@@ -8,15 +8,25 @@ const GROUPS = [
   { key: '금융',        label: '금융',          icon: 'wallet',     tint: 'var(--positive)', rgb: 'var(--positive-rgb)', desc: '정부가 원금을 얹어주는 것들' },
   { key: '자격증·어학', label: '자격증 · 어학', icon: 'craft',      tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '무료로 응시하고 응시료를 환급받는 것들' },
   { key: '교육·학점',   label: '교육 · 학점',   icon: 'graduation', tint: '#9B8CF5',         rgb: '155,140,245',         desc: '시간만 내면 학점·수료증이 되는 것들' },
+  { key: '군별 전용',   label: '군별 전용',     icon: 'shield',     tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '네 군에서만 받는 것들' },
   { key: '전역 준비',   label: '전역 준비',     icon: 'briefcase',  tint: 'var(--sub)',      rgb: '255,255,255',         desc: '전역 직후로 이어지는 것들' },
 ];
-const GROUP_OF = { b1: '금융', b7: '금융', b3: '자격증·어학', b6: '자격증·어학', b2: '자격증·어학', b4: '교육·학점', b5: '교육·학점', b8: '전역 준비' };
+const GROUP_OF = {
+  b1: '금융', b7: '금융', b3: '자격증·어학', b6: '자격증·어학', b2: '자격증·어학',
+  b4: '교육·학점', b5: '교육·학점', b8: '군별 전용', b9: '군별 전용', b10: '군별 전용', b11: '전역 준비',
+};
 const PASSIVE = { b1: true, b7: true };
+// A benefit shows for the selected branch when it is universal (전군) or tagged
+// to that branch (LOGIC-GAPS F6 — the filter used to be a no-op).
+const matchesBranch = (b, branch) => (b.branches || ['전군']).some((x) => x === '전군' || x === branch);
 
-export function BenefitsScreen({ onMakeQuest }) {
+export function BenefitsScreen({ onMakeQuest, soldier }) {
   const benefits = useStore((s) => s.benefits);
-  const [branch, setBranch] = useState('육군');
-  const grouped = GROUPS.map((g) => ({ ...g, items: benefits.filter((b) => GROUP_OF[b.id] === g.key) })).filter((g) => g.items.length);
+  const storeSoldier = useStore((s) => s.soldier);
+  const [branch, setBranch] = useState((soldier || storeSoldier)?.branch || '전군');
+  const grouped = GROUPS
+    .map((g) => ({ ...g, items: benefits.filter((b) => GROUP_OF[b.id] === g.key && matchesBranch(b, branch)) }))
+    .filter((g) => g.items.length);
 
   return (
     <div className="tm-rise">
