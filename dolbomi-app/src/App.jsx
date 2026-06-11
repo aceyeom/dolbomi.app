@@ -5,7 +5,7 @@ import { useStore } from './store';
 import { HomeScreen } from './screens/HomeScreen';
 import { QuestScreen } from './screens/QuestScreen';
 import { RadarScreen } from './screens/RadarScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
+import { ProfileScreen, StatDetailPage, RoadmapPage, TitlesPage, RecordsPage } from './screens/ProfileScreen';
 import { OppDetail } from './screens/OppDetail';
 import { OppPlan } from './screens/OppPlan';
 import { AuthScreen } from './screens/AuthScreen';
@@ -17,7 +17,6 @@ import { CheckInSheet, QuestComplete, Wrapped } from './components/Overlays';
 import { AvatarViewer } from './components/creature/AvatarViewer';
 import { CREATURE_PATHS } from './components/creature/CreatureHero';
 import { evolutionOf, COMPANION_STAGE } from './components/creature/GuardianCard';
-import { FirstRunGuide, guideSeen } from './components/Guide';
 import { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakToggle, TweakRadio } from './components/TweaksPanel';
 import { IOSDevice } from './components/IOSFrame';
 import './styles/tokens.css';
@@ -26,7 +25,7 @@ import './styles/tokens.css';
 // + the Settings screen). These remain default-only.
 const TWEAK_DEFAULTS = { istroke: 1.75, game: 20, statMode: '단색', showAi: true };
 
-const PAL_MAP = { '골드': 'gold', '택티컬': 'green', '스틸': 'steel' };
+const PAL_MAP = { '그린': 'green', '골드': 'gold', '스틸': 'steel' };
 const PATH_KEYS = new Set(CREATURE_PATHS.map((p) => p.key));
 const ANIMAL_FOR_PATH = { haechi: 'ram', dragon: 'fox' };
 
@@ -38,7 +37,7 @@ const NAV = [
   { key: 'radar', label: '기회', icon: 'target' },
   { key: 'profile', label: '프로필', icon: 'user' },
 ];
-const TAB_TITLES = { home: '', quests: '오늘의 퀘스트', radar: '기회 레이더', profile: '프로필' };
+const TAB_TITLES = { home: '', quests: '퀘스트', radar: '기회', profile: '프로필' };
 
 export default function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -82,11 +81,6 @@ export default function App() {
   }, [toast]);
   const toastShown = toast && toast.id !== toastExpiredId ? toast : null;
 
-  // one-time core-loop walkthrough, right after onboarding (derived, no effect)
-  const [guideDismissed, setGuideDismissed] = useState(false);
-  const onboarded = !!useStore((s) => s.soldier?.onboarded);
-  const guideOpen = loaded && onboarded && !needsAuth && !guideDismissed && !guideSeen();
-
   const pushedOpp = pushed && pushed.id ? oppById(pushed.id) : null;
   const getMs = (o) => o.milestones;
 
@@ -98,7 +92,7 @@ export default function App() {
   const pickPath = (key) => {
     if (!PATH_KEYS.has(key) || key === creaturePath) return;
     if (evolutionOf(allStats).stage < COMPANION_STAGE) {
-      showToast('동료 수호신은 성체 단계(140 XP)에 해금돼');
+      showToast('동료 수호신은 성체 단계(140 XP)에 만날 수 있어요');
       return;
     }
     setPref('path', key);
@@ -123,7 +117,7 @@ export default function App() {
   const addToTonight = (oId) => { storeAddTonight(oId); setPushed(null); setTab('quests'); };
 
   const isDark = theme === 'dark';
-  const palData = PAL_MAP[prefs.palette] || 'gold';
+  const palData = PAL_MAP[prefs.palette] || 'green';
 
   // ── gates: loading → auth → app ──────────────────────────────────────
   if (!authReady || !loaded) {
@@ -180,6 +174,18 @@ export default function App() {
     } else if (pushed.type === 'wrapped') {
       pushContent = <Wrapped />;
       pushTitle = '월간 결산';
+    } else if (pushed.type === 'statDetail') {
+      pushContent = <StatDetailPage stats={allStats} statMode={statMode} onOpenOpp={makeQuest} />;
+      pushTitle = '능력치 상세';
+    } else if (pushed.type === 'roadmap') {
+      pushContent = <RoadmapPage stats={allStats} />;
+      pushTitle = '진화 로드맵';
+    } else if (pushed.type === 'titles') {
+      pushContent = <TitlesPage />;
+      pushTitle = '칭호';
+    } else if (pushed.type === 'records') {
+      pushContent = <RecordsPage onOpenRecap={() => setPushed({ type: 'wrapped' })} />;
+      pushTitle = '기록';
     } else if (pushed.type === 'addOpp') {
       pushContent = <AddOppScreen onSaved={(id) => setPushed({ type: 'opp', id })} />;
       pushTitle = '기회 직접 추가';
@@ -250,9 +256,7 @@ export default function App() {
         </div>
       )}
 
-      {guideOpen && <FirstRunGuide onDone={() => { setGuideDismissed(true); goTab('quests'); }} />}
-
-      {sheet === 'checkin' && <CheckInSheet onClose={() => setSheet(null)} onDone={(m) => { storeCheckin(m.key, m.energy); setSheet(null); }} />}
+      {sheet === 'checkin' &&<CheckInSheet guardianPath={creaturePath} onClose={() => setSheet(null)} onDone={(m) => { storeCheckin(m.key, m.energy); setSheet(null); }} />}
       {celebrate && <QuestComplete quest={celebrate} guardianName={(CREATURE_PATHS || []).find((p) => p.key === creaturePath)?.ko || '수호신'} onClose={() => { setCelebrate(null); setPulse((p) => p + 1); }} />}
       {showAvatar && <AvatarViewer stats={allStats} creaturePath={creaturePath} creatureAnimal={creatureAnimal} onSwapPath={pickPath} milestones={milestones} theme={theme} soldier={soldier} onClose={() => setShowAvatar(false)} />}
 

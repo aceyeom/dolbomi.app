@@ -5,11 +5,11 @@ import { benefitFilters } from '../data';
 import { useStore } from '../store';
 
 const GROUPS = [
-  { key: '금융',        label: '금융',          icon: 'wallet',     tint: 'var(--positive)', rgb: 'var(--positive-rgb)', desc: '정부가 원금을 얹어주는 것들' },
-  { key: '자격증·어학', label: '자격증 · 어학', icon: 'craft',      tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '무료로 응시하고 응시료를 환급받는 것들' },
-  { key: '교육·학점',   label: '교육 · 학점',   icon: 'graduation', tint: '#9B8CF5',         rgb: '155,140,245',         desc: '시간만 내면 학점·수료증이 되는 것들' },
-  { key: '군별 전용',   label: '군별 전용',     icon: 'shield',     tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '네 군에서만 받는 것들' },
-  { key: '전역 준비',   label: '전역 준비',     icon: 'briefcase',  tint: 'var(--sub)',      rgb: '255,255,255',         desc: '전역 직후로 이어지는 것들' },
+  { key: '금융',        label: '금융',          icon: 'wallet',     tint: 'var(--positive)', rgb: 'var(--positive-rgb)', desc: '정부가 원금을 얹어줘요' },
+  { key: '자격증·어학', label: '자격증 · 어학', icon: 'craft',      tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '응시료를 지원받을 수 있어요' },
+  { key: '교육·학점',   label: '교육 · 학점',   icon: 'graduation', tint: '#9B8CF5',         rgb: '155,140,245',         desc: '시간만 내면 학점·수료증이 돼요' },
+  { key: '군별 전용',   label: '군별 전용',     icon: 'shield',     tint: 'var(--accent)',   rgb: 'var(--accent-rgb)',   desc: '내 군에서만 받을 수 있어요' },
+  { key: '전역 준비',   label: '전역 준비',     icon: 'briefcase',  tint: 'var(--sub)',      rgb: '255,255,255',         desc: '전역 직후로 이어져요' },
 ];
 const GROUP_OF = {
   b1: '금융', b7: '금융', b3: '자격증·어학', b6: '자격증·어학', b2: '자격증·어학',
@@ -33,8 +33,8 @@ export function BenefitsScreen({ onMakeQuest, soldier }) {
       <Card pad={14} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 11 }}>
         <IconChip name="shield" tone="positive" size={38} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700 }}>군인이라서 그냥 받는 것들</div>
-          <div style={{ fontSize: 11, color: 'var(--sub)', marginTop: 2, lineHeight: 1.4 }}>소득·카드·가족 정보 <span style={{ color: 'var(--positive)', fontWeight: 700 }}>저장 안 함</span> · 자격은 기기 안에서만 판단</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>군인이라서 받을 수 있는 것들</div>
+          <div style={{ fontSize: 11, color: 'var(--sub)', marginTop: 2, lineHeight: 1.4 }}>개인 정보는 <span style={{ color: 'var(--positive)', fontWeight: 700 }}>저장하지 않아요</span></div>
         </div>
       </Card>
 
@@ -69,7 +69,7 @@ export function BenefitsScreen({ onMakeQuest, soldier }) {
       </div>
 
       <div style={{ textAlign: 'center', fontSize: 10.5, color: 'var(--faint)', marginTop: 22, lineHeight: 1.5 }}>
-        혜택·자격 기준은 부대·시기별로 다를 수 있어 · 출처는 각 혜택의 안내를 확인
+        혜택과 자격 기준은 부대·시기에 따라 다를 수 있어요
       </div>
     </div>
   );

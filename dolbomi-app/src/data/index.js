@@ -9,9 +9,11 @@
 // Per-user *mutable* state (a soldier's stats, tonight's quests, completion,
 // streak, titles, activity) lives in Supabase, NOT here.
 
-import { rawCatalog, rawQuestPool, INTERESTS } from './catalog.js';
+import { rawCatalog, rawQuestPool, INTERESTS, QUEST_INFO } from './catalog.js';
 
-export { INTERESTS };
+export { INTERESTS, QUEST_INFO, rawQuestPool };
+// plain-language detail for a quest (detail bottom sheet) — keyed by txt
+export const questInfoOf = (txt) => QUEST_INFO[txt] || null;
 
 // ── Date helpers — D-day advances with real time ──────────────────────
 const DAY = 86400000;
@@ -106,13 +108,15 @@ export const BRANCHES = Object.keys(BRANCH_INFO);
 // `base` is the starting value a brand-new account gets (used by the Supabase
 // new-user trigger); `cur` is the demo persona's value for the offline fallback.
 // base = 0 on purpose: every pixel of a real user's bars is something they did.
+// Primary names are plain everyday Korean (design revamp v2 V5) — the invented
+// military vocabulary (전투력/지휘력/담력…) was a decoding tax on every screen.
 export const stats = [
-  { key: 'body',   mil: '전투력', en: 'BODY',   real: '체력·건강',   cur: 62, tgt: 80, base: 0 },
-  { key: 'mind',   mil: '정신력', en: 'MIND',   real: '멘탈·집중',   cur: 55, tgt: 75, base: 0 },
-  { key: 'money',  mil: '자산력', en: 'MONEY',  real: '자산·금융',   cur: 48, tgt: 70, base: 0 },
-  { key: 'craft',  mil: '숙련도', en: 'CRAFT',  real: '기술·자격',   cur: 71, tgt: 90, base: 0 },
-  { key: 'people', mil: '지휘력', en: 'PEOPLE', real: '리더십·소통', cur: 40, tgt: 65, base: 0 },
-  { key: 'edge',   mil: '담력',   en: 'EDGE',   real: '용기·도전',   cur: 28, tgt: 60, base: 0 },
+  { key: 'body',   mil: '체력', en: 'BODY',   real: '몸·건강',     cur: 62, tgt: 80, base: 0 },
+  { key: 'mind',   mil: '정신', en: 'MIND',   real: '멘탈·집중',   cur: 55, tgt: 75, base: 0 },
+  { key: 'money',  mil: '자산', en: 'MONEY',  real: '돈·금융',     cur: 48, tgt: 70, base: 0 },
+  { key: 'craft',  mil: '기술', en: 'CRAFT',  real: '기술·자격증', cur: 71, tgt: 90, base: 0 },
+  { key: 'people', mil: '관계', en: 'PEOPLE', real: '리더십·소통', cur: 40, tgt: 65, base: 0 },
+  { key: 'edge',   mil: '도전', en: 'EDGE',   real: '용기·새로움', cur: 28, tgt: 60, base: 0 },
 ];
 export const STAT_CAP = 100; // a stat's `cur` is clamped to this; six caps = 600 = top band
 
@@ -120,13 +124,13 @@ export const STAT_CAP = 100; // a stat's `cur` is clamped to this; six caps = 60
 // Picked at onboarding; sets the per-stat discharge-day targets (`stats.tgt`)
 // that draw the Gap on the profile Receipt. Individually adjustable later.
 export const GOAL_TEMPLATES = [
-  { key: 'career',  ko: '취업 준비형', icon: 'briefcase', desc: '자격증·자소서·소통 — 전역하자마자 일하러 간다',
+  { key: 'career',  ko: '취업 준비형', icon: 'briefcase', desc: '자격증과 이력을 채워서 바로 일하러 가요',
     targets: { body: 50, mind: 70, money: 50, craft: 85, people: 75, edge: 60 } },
-  { key: 'fitness', ko: '체력 단련형', icon: 'body', desc: '몸을 만들어서 나간다 — 입대 전보다 강하게',
+  { key: 'fitness', ko: '체력 단련형', icon: 'body', desc: '입대 전보다 강한 몸으로 나가요',
     targets: { body: 90, mind: 60, money: 40, craft: 50, people: 55, edge: 65 } },
-  { key: 'asset',   ko: '자산 형성형', icon: 'wallet', desc: '적금·금융 지식 — 통장과 머리에 자본을 채운다',
+  { key: 'asset',   ko: '자산 형성형', icon: 'wallet', desc: '통장과 금융 지식을 같이 채워요',
     targets: { body: 50, mind: 55, money: 90, craft: 60, people: 50, edge: 55 } },
-  { key: 'founder', ko: '창업 도전형', icon: 'zap', desc: '아이디어·실행·담력 — 겁 없이 들이받는다',
+  { key: 'founder', ko: '창업 도전형', icon: 'zap', desc: '아이디어를 실행으로 옮기는 연습을 해요',
     targets: { body: 55, mind: 65, money: 70, craft: 70, people: 70, edge: 90 } },
 ];
 export const goalTemplateOf = (key) => GOAL_TEMPLATES.find((g) => g.key === key) || null;
@@ -149,10 +153,10 @@ export const questPool = rawQuestPool;
 
 // ── Mood / energy ─────────────────────────────────────────────────────
 export const moods = [
-  { key: 'low',  emoji: '😮‍💨', label: '지친다' },
-  { key: 'meh',  emoji: '😐',   label: '그저그럼' },
-  { key: 'ok',   emoji: '🙂',   label: '괜찮아' },
-  { key: 'good', emoji: '😤',   label: '의욕충전' },
+  { key: 'low',  emoji: '😮‍💨', label: '지쳤어요' },
+  { key: 'meh',  emoji: '😐',   label: '그저 그래요' },
+  { key: 'ok',   emoji: '🙂',   label: '괜찮아요' },
+  { key: 'good', emoji: '😤',   label: '힘이 나요' },
 ];
 export const energy = ['바닥', '낮음', '보통', '높음'];
 

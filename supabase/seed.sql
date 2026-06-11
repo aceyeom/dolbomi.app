@@ -4,12 +4,12 @@
 truncate quest_pool, benefits, subquests, milestones, opportunities, titles, stat_defs restart identity cascade;
 
 -- stat definitions (per-stat target + new-account starting value)
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('body', '전투력', 'BODY', '체력·건강', 80, 0, 0);
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('mind', '정신력', 'MIND', '멘탈·집중', 75, 0, 1);
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('money', '자산력', 'MONEY', '자산·금융', 70, 0, 2);
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('craft', '숙련도', 'CRAFT', '기술·자격', 90, 0, 3);
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('people', '지휘력', 'PEOPLE', '리더십·소통', 65, 0, 4);
-insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('edge', '담력', 'EDGE', '용기·도전', 60, 0, 5);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('body', '체력', 'BODY', '몸·건강', 80, 0, 0);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('mind', '정신', 'MIND', '멘탈·집중', 75, 0, 1);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('money', '자산', 'MONEY', '돈·금융', 70, 0, 2);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('craft', '기술', 'CRAFT', '기술·자격증', 90, 0, 3);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('people', '관계', 'PEOPLE', '리더십·소통', 65, 0, 4);
+insert into stat_defs (key, mil, en, real, tgt, base, ord) values ('edge', '도전', 'EDGE', '용기·새로움', 60, 0, 5);
 
 -- opportunity catalog
 insert into opportunities (id, cat, stat, title, hot, sub, what, eligibility, apply_where, source, verified, cost, deadline, unlock_dday, started, reward, why, expected_pct, status, img, ord, tags) values ('startup', '대회', 'edge', '육군창업경진대회', true, 'K-스타트업 전국 본선 연계 · 2~5인 팀', '육군이 여는 창업 경진대회. 본선 수상하면 포상휴가에 상금, 창업멘토링캠프까지.', '육군 (장교·부사관·병) · 2~5인 팀 (단독 불가)', 'army-startup.co.kr', '육군본부 · army-startup.co.kr', '2026.05', '무료', '2026-07-25', null, false, '{"kind":"휴가","finish":"+2~5일","maxDays":5,"label":"본선 수상 포상휴가 2~5일 + 상금","note":"부대 내규 · 본선 수상자 기준"}'::jsonb, '입상 = 포상휴가. 네 아이디어로 휴가 따자.', 38, 'tight', 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=720&h=420&fit=crop&q=72', 0, '["startup"]'::jsonb);

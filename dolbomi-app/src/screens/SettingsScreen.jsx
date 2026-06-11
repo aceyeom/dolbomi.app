@@ -5,10 +5,10 @@ import { CREATURE_PATHS } from '../components/creature/CreatureHero';
 import { evolutionOf, BANDS, COMPANION_STAGE } from '../components/creature/GuardianCard';
 
 const THEMES = [{ v: 'light', ko: '라이트' }, { v: 'dark', ko: '다크' }];
-// 골드 is the default; the other palettes are evolution-roadmap unlocks
+// 그린 is the default; 골드/스틸 are evolution-roadmap unlocks (gold = earned)
 const PALETTES = [
-  { v: '골드', sw: '#E7A33C', stage: 1 },
-  { v: '택티컬', sw: '#5A8F5A', stage: 2 },
+  { v: '그린', sw: '#179A4F', stage: 1 },
+  { v: '골드', sw: '#E7A33C', stage: 2 },
   { v: '스틸', sw: '#6E8AA6', stage: 3 },
 ];
 
@@ -38,7 +38,7 @@ export function SettingsScreen({ onOpenAdmin }) {
 
   return (
     <div className="tm-rise">
-      <SectionHeader caption="앱 전체에 바로 적용돼 · 다음에 와도 유지된다">화면</SectionHeader>
+      <SectionHeader caption="바로 적용되고 계속 유지돼요">화면</SectionHeader>
       <Card pad={16} style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sub)', marginBottom: 8 }}>모드</div>
         <Row>
@@ -56,7 +56,7 @@ export function SettingsScreen({ onOpenAdmin }) {
             return (
               <Pill key={p.v} on={prefs.palette === p.v}
                 onClick={() => locked
-                  ? showToast(`「${p.v}」 팔레트는 ${band.label} 단계(${band.min} XP)에 해금돼`)
+                  ? showToast(`「${p.v}」 팔레트는 ${band.label} 단계(${band.min} XP)에 열려요`)
                   : setPref('palette', p.v)}>
                 <span style={{ width: 13, height: 13, borderRadius: 999, background: p.sw, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.2)', opacity: locked ? 0.5 : 1 }} />
                 {p.v}{locked && Icon('shield', { size: 12, color: 'var(--faint)', stroke: 2 })}
@@ -66,7 +66,7 @@ export function SettingsScreen({ onOpenAdmin }) {
         </Row>
       </Card>
 
-      <SectionHeader caption={companionUnlocked ? '동료 수호신과 언제든 교대할 수 있어' : `다른 수호신은 성체 단계(${BANDS[COMPANION_STAGE - 1].min} XP)에 동료로 해금`}>수호신</SectionHeader>
+      <SectionHeader caption={companionUnlocked ? '동료 수호신과 언제든 교대할 수 있어요' : `다른 수호신은 성체 단계(${BANDS[COMPANION_STAGE - 1].min} XP)에 동료로 와요`}>수호신</SectionHeader>
       <Card pad={16} style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {CREATURE_PATHS.map((p) => {
@@ -75,7 +75,7 @@ export function SettingsScreen({ onOpenAdmin }) {
             return (
               <button key={p.key} className="tm-tap"
                 onClick={() => locked
-                  ? showToast(`동료 수호신은 성체 단계(${BANDS[COMPANION_STAGE - 1].min} XP)에 해금돼`)
+                  ? showToast(`동료 수호신은 성체 단계(${BANDS[COMPANION_STAGE - 1].min} XP)에 만날 수 있어요`)
                   : setPref('path', p.key)}
                 style={{ width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', gap: 11, padding: '11px 12px', borderRadius: 12, opacity: locked ? 0.6 : 1,
@@ -83,7 +83,7 @@ export function SettingsScreen({ onOpenAdmin }) {
                 <span style={{ width: 9, height: 9, borderRadius: 999, background: on ? 'var(--accent)' : 'var(--faint)', flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink)' }}>{p.ko}{on ? ' · 나의 수호신' : ''}</span>
-                  <span style={{ display: 'block', fontSize: 11, color: 'var(--faint)' }}>{locked ? '성체 단계에 동료로 해금' : p.desc}</span>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--faint)' }}>{locked ? '성체 단계에 동료로 와요' : p.desc}</span>
                 </span>
                 {on ? Icon('check', { size: 16, color: 'var(--accent)', stroke: 2.4 }) : locked && Icon('shield', { size: 15, color: 'var(--faint)', stroke: 2 })}
               </button>
@@ -116,7 +116,7 @@ export function SettingsScreen({ onOpenAdmin }) {
 
       {isAdmin && onOpenAdmin && (
         <>
-          <SectionHeader caption="장병이 공유 신청한 기회를 심사해 전체에 공개" style={{ marginTop: 16 }}>관리자</SectionHeader>
+          <SectionHeader caption="공유 신청된 기회를 심사해 전체에 공개해요" style={{ marginTop: 16 }}>관리자</SectionHeader>
           <Card pad={16}>
             <Btn tone="soft" icon="badgeCheck" onClick={onOpenAdmin}>심사 대기열 열기</Btn>
           </Card>

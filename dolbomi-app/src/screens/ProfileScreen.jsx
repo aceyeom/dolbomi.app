@@ -1,7 +1,6 @@
-// 프로필 — the living Receipt + functional hub (design review).
-// "Who I'm becoming": identity → the Gap (현재 vs 전역 목표) → evolution
-// roadmap → titles → records, then the functional rows (avatar, settings,
-// share, logout). The guardian hero lives on 홈 only — no duplication here.
+// 프로필 — the Receipt + a clean link list (design revamp v2 S6).
+// Three things only: identity → 전역 리시트 (the Gap radar, ambient) → links.
+// Roadmap / titles / records / stat detail open as their own pages.
 import { useState } from 'react';
 import { Icon } from '../icons';
 import { Card, Tag, Btn, SectionHeader } from '../components/ui';
@@ -10,13 +9,11 @@ import { evolutionOf, BANDS } from '../components/creature/GuardianCard';
 import { StatRow } from '../components/SkillDetail';
 import { BadgeCard } from '../components/Badges';
 import { ActivityLog } from '../components/ActivityLog';
-import { TipBanner } from '../components/Guide';
 import { GOAL_TEMPLATES, goalTemplateOf } from '../data';
 import { share } from '../util/share';
 
-export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenOpp, onOpenAvatar, onOpenSettings, onGoRadar }) {
+export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenAvatar, onOpenSettings, onGoRadar }) {
   const titles = useStore((s) => s.titles);
-  const equipTitle = useStore((s) => s.equipTitle);
   const catalog = useStore((s) => s.catalog);
   const signOut = useStore((s) => s.signOut);
   const online = useStore((s) => s.online);
@@ -30,9 +27,6 @@ export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenOpp, onO
 
   return (
     <div className="tm-rise">
-      <TipBanner id="profile" icon="trophy" title="이 페이지가 너의 증명서다"
-        text="여기 쌓이는 모든 숫자는 네가 실제로 한 일. 전역하는 날, 시간이 헛되지 않았다는 영수증이 된다." />
-
       {/* identity */}
       <Card pad={16} style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -68,22 +62,19 @@ export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenOpp, onO
         </div>
       </Card>
 
-      {/* the Gap — 현재 나 vs 전역하는 날의 나 */}
-      <SectionHeader right={`총 ${evo.total} XP`}
-        caption={goal ? `목표: ${goal.ko} · 점선이 전역하는 날의 너` : '점선이 전역하는 날의 너 · 목표를 정해보자'}>
-        전역 리시트 · 목표와의 거리
-      </SectionHeader>
+      {/* 전역 리시트 — the Gap, ambient */}
+      <SectionHeader right={goal ? goal.ko : null}>전역 리시트</SectionHeader>
       <Card pad={18} style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', paddingBottom: 6 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <Radar stats={stats} mode={statMode} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11.5, color: 'var(--sub)', fontWeight: 600 }}>여섯 능력치 합산</div>
+            <div style={{ fontSize: 11.5, color: 'var(--sub)', fontWeight: 600 }}>지금까지 쌓은 것</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
-              <span className="num" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.03em', color: 'var(--accent)' }}>{evo.total}</span>
+              <span className="num" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.03em', color: 'var(--gold)' }}>{evo.total}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--faint)' }}>XP</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 4, lineHeight: 1.4 }}>
-              {evo.maxed ? '최종 진화 도달' : <>다음 진화 <b style={{ color: 'var(--ink)' }}>{evo.nextLabel}</b>까지 {100 - evo.pct}% 남음</>}
+              점선이 전역하는 날의 목표예요
             </div>
             <button onClick={() => setEditingTargets(true)} className="tm-tap" style={{ marginTop: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 999, fontSize: 11, fontWeight: 800,
@@ -92,14 +83,49 @@ export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenOpp, onO
             </button>
           </div>
         </div>
-        <div style={{ marginTop: 4 }}>
-          {stats.map((s) => <StatRow key={s.key} s={s} mode={statMode} divided={true} onOpenOpp={onOpenOpp} />)}
-        </div>
       </Card>
 
-      {/* evolution roadmap — every stage and what it unlocks */}
-      <SectionHeader right={`${evo.stage} / ${BANDS.length}단계`} caption="단계가 오를 때마다 보상이 해금돼 · 기능은 절대 잠기지 않아">진화 로드맵</SectionHeader>
-      <Card pad="6px 16px" style={{ marginBottom: 18 }}>
+      {/* everything else is navigation */}
+      <Card pad="4px 6px" style={{ marginBottom: 14 }}>
+        <HubRow icon="target" label="능력치 상세" sub="여섯 능력치의 현재와 목표" onClick={() => onOpen('statDetail')} />
+        <HubRow icon="sparkle" label="진화 로드맵" sub={`${evo.label} 단계 · 총 ${BANDS.length}단계`} onClick={() => onOpen('roadmap')} divided />
+        <HubRow icon="trophy" label="칭호" sub={`${owned} / ${titles.length} 보유`} onClick={() => onOpen('titles')} divided />
+        <HubRow icon="calendar" label="기록 · 월간 결산" onClick={() => onOpen('records')} divided />
+        <HubRow icon="pin" label="내가 등록한 기회" sub={mineCount ? `${mineCount}개` : null} onClick={onGoRadar} divided />
+      </Card>
+      <Card pad="4px 6px" style={{ marginBottom: 4 }}>
+        <HubRow icon="expand" label="수호신 크게 보기" onClick={onOpenAvatar} />
+        <HubRow icon="share" label="이번 달 결산 공유"
+          onClick={() => share(`DOLBOMI — ${soldier.name}, 총 ${evo.total} XP · ${evo.label} 단계. 복무를 성장으로 바꾸는 중.`)} divided />
+        <HubRow icon="sliders" label="설정" onClick={onOpenSettings} divided />
+        {online && <HubRow icon="arrowR" label="로그아웃" onClick={signOut} divided danger />}
+      </Card>
+
+      {editingTargets && (
+        <TargetEditor stats={stats} goalKey={soldier.goal} onClose={() => setEditingTargets(false)} />
+      )}
+    </div>
+  );
+}
+
+// ── sub-pages (pushed from the link list) ───────────────────────────────
+
+export function StatDetailPage({ stats, statMode, onOpenOpp }) {
+  return (
+    <div className="tm-rise">
+      <Card pad="6px 16px">
+        {stats.map((s) => <StatRow key={s.key} s={s} mode={statMode} divided={true} onOpenOpp={onOpenOpp} />)}
+      </Card>
+    </div>
+  );
+}
+
+export function RoadmapPage({ stats }) {
+  const evo = evolutionOf(stats);
+  return (
+    <div className="tm-rise">
+      <SectionHeader right={`${evo.stage} / ${BANDS.length}단계`}>수호신의 성장</SectionHeader>
+      <Card pad="6px 16px">
         {BANDS.map((b, i) => {
           const reached = evo.total >= b.min;
           const isCur = evo.stage === i + 1;
@@ -128,29 +154,28 @@ export function ProfileScreen({ soldier, stats, statMode, onOpen, onOpenOpp, onO
           );
         })}
       </Card>
+    </div>
+  );
+}
 
-      <SectionHeader right={`${owned} / ${titles.length}`} caption="보유한 칭호를 탭하면 착용 · 임무와 기록이 새겨진 문장">칭호</SectionHeader>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+export function TitlesPage() {
+  const titles = useStore((s) => s.titles);
+  const equipTitle = useStore((s) => s.equipTitle);
+  const owned = titles.filter((t) => t.owned).length;
+  return (
+    <div className="tm-rise">
+      <SectionHeader right={`${owned} / ${titles.length}`}>보유한 칭호를 누르면 착용해요</SectionHeader>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {titles.map((t) => <BadgeCard key={t.name} t={t} onEquip={() => equipTitle(t.name)} />)}
       </div>
+    </div>
+  );
+}
 
-      <SectionHeader caption="이번 달 결산과 최근 활동 기록">기록</SectionHeader>
-      <ActivityLog onOpenRecap={() => onOpen('wrapped')} />
-
-      {/* functional hub */}
-      <SectionHeader style={{ marginTop: 18 }}>바로가기</SectionHeader>
-      <Card pad="4px 6px" style={{ marginBottom: 4 }}>
-        <HubRow icon="expand" label="수호신 크게 보기" sub="회전 · 황금화 · 동료" onClick={onOpenAvatar} />
-        <HubRow icon="pin" label="내가 등록한 기회" sub={mineCount ? `${mineCount}개 · 기회 레이더 상단에 고정` : '부대 안 대회·일정을 직접 등록'} onClick={onGoRadar} divided />
-        <HubRow icon="share" label="이번 달 결산 공유"
-          onClick={() => share(`DOLBOMI — ${soldier.name}, 총 ${evo.total} XP · ${evo.label} 단계. 복무를 성장으로 바꾸는 중.`)} divided />
-        <HubRow icon="sliders" label="설정" sub="테마 · 팔레트 · 계정" onClick={onOpenSettings} divided />
-        {online && <HubRow icon="arrowR" label="로그아웃" onClick={signOut} divided danger />}
-      </Card>
-
-      {editingTargets && (
-        <TargetEditor stats={stats} goalKey={soldier.goal} onClose={() => setEditingTargets(false)} />
-      )}
+export function RecordsPage({ onOpenRecap }) {
+  return (
+    <div className="tm-rise">
+      <ActivityLog onOpenRecap={onOpenRecap} />
     </div>
   );
 }
@@ -161,9 +186,9 @@ function HubRow({ icon, label, sub, onClick, divided, danger }) {
       display: 'flex', alignItems: 'center', gap: 12, padding: '13px 10px', background: 'transparent', textAlign: 'left',
       borderTop: divided ? '1px solid var(--hair)' : 'none' }}>
       {Icon(icon, { size: 17, color: danger ? 'var(--danger)' : 'var(--sub)', stroke: 2 })}
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: danger ? 'var(--danger)' : 'var(--ink)' }}>{label}</span>
-        {sub && <span style={{ display: 'block', fontSize: 11, color: 'var(--faint)', marginTop: 1 }}>{sub}</span>}
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontSize: 13.5, fontWeight: 700, color: danger ? 'var(--danger)' : 'var(--ink)' }}>{label}</span>
+        {sub && <span style={{ fontSize: 11, color: 'var(--faint)' }}>{sub}</span>}
       </span>
       {Icon('chevR', { size: 16, color: 'var(--faint)' })}
     </button>
@@ -187,7 +212,7 @@ function TargetEditor({ stats, goalKey, onClose }) {
         <div style={{ width: 40, height: 5, borderRadius: 3, background: 'var(--line)', margin: '0 auto 16px' }} />
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-.02em' }}>전역하는 날의 나</div>
-          <div style={{ fontSize: 12, color: 'var(--sub)', marginTop: 3 }}>점선 목표를 조정해 · 템플릿으로 시작해도 좋아</div>
+          <div style={{ fontSize: 12, color: 'var(--sub)', marginTop: 3 }}>템플릿으로 시작해서 자유롭게 조정해보세요</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 18 }}>
           {GOAL_TEMPLATES.map((g) => {
