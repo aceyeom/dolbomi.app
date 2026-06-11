@@ -3,6 +3,7 @@
 // guided onboarding wizard right after the account exists.
 import { useState } from 'react';
 import { Btn } from '../components/ui';
+import { GUARDIAN_ART } from '../assets/manifest';
 import { useStore } from '../store';
 
 function Field({ label, children }) {
@@ -44,14 +45,15 @@ export function AuthScreen() {
     <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', background: 'var(--bg)' }}>
       <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '48px 26px 32px' }}>
         <div style={{ marginBottom: 30 }}>
-          <div style={{ width: 44, height: 5, borderRadius: 3, background: 'var(--accent)', marginBottom: 22 }} />
+          <img src={GUARDIAN_ART.haechi} alt="" draggable={false}
+            style={{ width: 92, height: 92, objectFit: 'contain', marginBottom: 18, userSelect: 'none' }} />
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.16 }}>
             우리<br />억울하지 말자.
           </h1>
           <p style={{ fontSize: 13, color: 'var(--sub)', marginTop: 10, lineHeight: 1.55 }}>
             {isSignup
-              ? '계정을 만들면 1분짜리 설정이 이어진다. 부대·병과·관심사에 맞춰 모든 퀘스트가 맞춤된다.'
-              : '18개월, 버린 시간으로 만들지 않는다 · DOLBOMI'}
+              ? '계정을 만들면 1분 설정이 이어져요. 관심사에 맞춰 퀘스트가 추천돼요.'
+              : '18개월을 버린 시간으로 만들지 않아요 · DOLBOMI'}
           </p>
         </div>
 
@@ -72,14 +74,14 @@ export function AuthScreen() {
 
         <div style={{ marginTop: 8 }}>
           <Btn onClick={submit} style={{ opacity: ready && !busy ? 1 : 0.45 }}>
-            {busy ? '잠시만…' : isSignup ? '계정 만들기' : '로그인'}
+            {busy ? '잠시만요…' : isSignup ? '계정 만들기' : '로그인'}
           </Btn>
         </div>
 
         <button onClick={() => setMode(isSignup ? 'signin' : 'signup')} className="tm-tap"
           style={{ marginTop: 20, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
             fontSize: 12.5, color: 'var(--sub)', textAlign: 'center' }}>
-          {isSignup ? '이미 계정이 있어 · ' : '처음이야? · '}
+          {isSignup ? '이미 계정이 있어요 · ' : '처음이신가요? · '}
           <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{isSignup ? '로그인' : '계정 만들기'}</span>
         </button>
       </div>

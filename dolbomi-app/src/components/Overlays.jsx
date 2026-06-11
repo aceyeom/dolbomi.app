@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon, STAT_C } from '../icons';
 import { Card, Btn, Tag } from './ui';
 import { moods, energy, wrapped } from '../data';
+import { MOOD_ART, GUARDIAN_ART } from '../assets/manifest';
 import { useStore } from '../store';
 import { share } from '../util/share';
 
@@ -18,47 +19,70 @@ function SheetShell({ children, onClose }) {
   );
 }
 
-function CheckInSheet({ onClose, onDone }) {
+// the nightly ritual (design revamp v2 S3) — a full-screen moment with the
+// guardian, not a utility modal. The guardian asks; you answer; the night's
+// quests get dealt. The guardian speaks 반말 (it's your companion).
+function CheckInSheet({ onClose, onDone, guardianPath = 'haechi' }) {
   const [mood, setMood] = React.useState(null);
   const [energyVal, setEnergyVal] = React.useState(null);
   const ready = mood && energyVal != null;
+  const line = !mood
+    ? '오늘 어땠어?'
+    : energyVal == null
+      ? (mood.key === 'low' ? '그런 날도 있지. 오늘 힘은 얼마나 남았어?' : '좋아. 오늘 힘은 얼마나 남았어?')
+      : energyVal === 0 ? '오늘은 5분짜리만 줄게. 그것도 1승이야.'
+      : energyVal >= 2 ? '컨디션 좋네. 오늘 밤이 기대된다.'
+      : '딱 맞게 준비할게.';
   return (
-    <SheetShell onClose={onClose}>
-      <div style={{ textAlign: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-.02em' }}>오늘 하루 어땠어?</div>
-        <div style={{ fontSize: 12.5, color: 'var(--sub)', marginTop: 4 }}>두 번만 탭하면 끝 · 오늘 밤 퀘스트가 맞춰져</div>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--bg)', display: 'flex', flexDirection: 'column',
+      animation: 'tmFade .25s both', padding: '54px 24px 30px' }}>
+      <button onClick={onClose} aria-label="닫기" className="tm-tap" style={{ position: 'absolute', top: 16, right: 18, width: 34, height: 34,
+        borderRadius: 999, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--surface)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+        {Icon('x', { size: 17, color: 'var(--sub)', stroke: 2 })}
+      </button>
+
+      {/* the guardian asks */}
+      <div style={{ textAlign: 'center', marginTop: 8 }}>
+        <img src={GUARDIAN_ART[guardianPath] || GUARDIAN_ART.haechi} alt="" draggable={false}
+          style={{ width: 132, height: 132, objectFit: 'contain', userSelect: 'none', animation: 'tmPop .5s cubic-bezier(.2,.9,.3,1) both' }} />
+        <div key={line} className="tm-rise" style={{ marginTop: 14, fontSize: 18, fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.4 }}>
+          “{line}”
+        </div>
       </div>
-      <div style={{ marginTop: 22, marginBottom: 9, fontSize: 12, fontWeight: 700, color: 'var(--sub)' }}>기분</div>
+
+      <div style={{ flex: 1 }} />
+
+      <div style={{ marginBottom: 9, fontSize: 12, fontWeight: 700, color: 'var(--sub)' }}>오늘의 기분</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
         {moods.map((m) => {
           const on = mood && mood.key === m.key;
           return (
-            <button key={m.key} onClick={() => setMood(m)} className="tm-tap" style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '14px 0', borderRadius: 14,
-              background: on ? 'rgba(var(--accent-rgb),.15)' : 'var(--surface2)', boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)',
+            <button key={m.key} onClick={() => setMood(m)} className="tm-tap" style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '13px 0 11px', borderRadius: 14,
+              background: on ? 'rgba(var(--accent-rgb),.13)' : 'var(--surface)', boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 24 }}>{m.emoji}</span>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--ink)' }}>{m.label}</span>
+              <img src={MOOD_ART[m.key]} alt="" width={34} height={34} draggable={false} style={{ objectFit: 'contain' }} />
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink)' }}>{m.label}</span>
             </button>
           );
         })}
       </div>
-      <div style={{ marginTop: 20, marginBottom: 9, fontSize: 12, fontWeight: 700, color: 'var(--sub)' }}>에너지</div>
+
+      <div style={{ margin: '18px 0 9px', fontSize: 12, fontWeight: 700, color: 'var(--sub)' }}>남은 에너지</div>
       <div style={{ display: 'flex', gap: 8 }}>
         {energy.map((e, i) => {
           const on = energyVal === i;
           return (
             <button key={e} onClick={() => setEnergyVal(i)} className="tm-tap" style={{ flex: 1, border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '12px 0', borderRadius: 12, fontSize: 12.5, fontWeight: 700,
-              background: on ? 'rgba(var(--accent-rgb),.15)' : 'var(--surface2)', boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)', color: 'var(--ink)' }}>{e}</button>
+              background: on ? 'rgba(var(--accent-rgb),.13)' : 'var(--surface)', boxShadow: on ? 'inset 0 0 0 1.5px var(--accent)' : 'inset 0 0 0 1px var(--line)', color: on ? 'var(--accent)' : 'var(--ink)' }}>{e}</button>
           );
         })}
       </div>
-      <div style={{ marginTop: 14, minHeight: 18, fontSize: 12, color: 'var(--positive)', textAlign: 'center', fontWeight: 600 }}>
-        {energyVal === 0 ? '에너지 바닥이네. 오늘은 5분짜리 미니 퀘스트만 줄게.' : energyVal >= 2 ? '컨디션 좋다. 하나 더 밀어붙여보자.' : ' '}
+
+      <div style={{ marginTop: 20 }}>
+        <Btn onClick={() => ready && onDone({ ...mood, energy: energyVal })} style={{ opacity: ready ? 1 : 0.4 }}>오늘 밤의 퀘스트 받기</Btn>
       </div>
-      <div style={{ marginTop: 14 }}>
-        <Btn onClick={() => ready && onDone({ ...mood, energy: energyVal })} style={{ opacity: ready ? 1 : 0.4 }}>오늘 밤의 3 받기</Btn>
-      </div>
-    </SheetShell>
+    </div>
   );
 }
 
@@ -125,7 +149,7 @@ function QuestComplete({ quest, guardianName, onClose }) {
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: c, marginTop: 4,
           padding: '3px 11px', borderRadius: 999, background: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` }}>
           {Icon(quest.stat, { size: 13, color: c, stroke: 2 })}{stat.mil} 경험치 성장</div>
-        <p style={{ fontSize: 13.5, color: 'rgba(242,244,246,.74)', lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>"{quest.hard ? '그게 바로 담력이다. 오늘 한 칸 앞섰어.' : '한 칸 더. 전역 목표가 가까워졌다.'}"</p>
+        <p style={{ fontSize: 13.5, color: 'rgba(242,244,246,.74)', lineHeight: 1.55, marginTop: 8, textWrap: 'pretty' }}>"{quest.hard ? '그게 바로 용기야. 오늘 한 칸 앞섰어.' : '한 칸 더. 전역의 내가 가까워졌어.'}"</p>
       </div>
     </div>
   );

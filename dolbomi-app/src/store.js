@@ -25,7 +25,8 @@ function loadLocalOpps() {
 }
 function saveLocalOpps(list) { try { localStorage.setItem(LOCAL_OPPS_KEY, JSON.stringify(list)); } catch { /* ignore */ } }
 
-const DEFAULT_PREFS = { theme: 'light', palette: '골드', path: 'haechi' };
+// light + green is the default everywhere; gold is the earned-reward color
+const DEFAULT_PREFS = { theme: 'light', palette: '그린', path: 'haechi' };
 function loadPrefs() {
   try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; }
   catch { return { ...DEFAULT_PREFS }; }
@@ -140,8 +141,8 @@ export const useStore = create((set, get) => ({
   },
 
   async addTonight(oppId) {
-    if (!get().online) { addTonightLocal(set, get, oppId); get().showToast('오늘 밤 퀘스트에 추가했어'); return; }
-    try { await api.addTonight(oppId); await get().refresh(); get().showToast('오늘 밤 퀘스트에 추가했어'); }
+    if (!get().online) { addTonightLocal(set, get, oppId); get().showToast('오늘 밤 퀘스트에 추가했어요'); return; }
+    try { await api.addTonight(oppId); await get().refresh(); get().showToast('오늘 밤 퀘스트에 추가했어요'); }
     catch { /* ignore */ }
   },
 
@@ -152,7 +153,7 @@ export const useStore = create((set, get) => ({
       const r = await api.checkin(mood, energy);
       await get().refresh();
       const before = r?.streak_before ?? 0;
-      if (r?.streak === 1 && before > 1) get().showToast(`연속 기록이 끊겼어 · ${before}일 → 1일부터 다시`);
+      if (r?.streak === 1 && before > 1) get().showToast(`연속 기록이 끊겼어요 · ${before}일 → 1일부터 다시`);
       else if (r?.streak) get().showToast(`체크인 완료 · ${r.streak}일 연속`);
     } catch { /* ignore */ }
   },

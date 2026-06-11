@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../icons';
-import { Card, ProgressBar, IconChip } from '../components/ui';
-import { STATUS } from '../icons';
+import { Card, ProgressBar } from '../components/ui';
 import { cats, radarCats } from '../data';
+import { CAT_ART, SPOT, Art } from '../assets/manifest';
 import { useStore } from '../store';
-import { TipBanner } from '../components/Guide';
 import { VacationScreen } from './VacationScreen';
 import { BenefitsScreen } from './BenefitsScreen';
 
@@ -71,15 +70,12 @@ function ExploreList({ onOpenOpp, onAddOpp, soldier }) {
 
   return (
     <div>
-      <TipBanner id="radar" icon="target" title="진짜 프로그램, 단계별 경로"
-        text="자격증·대회·적금이 단계별 경로로 준비돼 있어. 단계마다 능력치 XP, 인증하면 +50% 보너스. 대회 입상은 포상휴가로 이어진다." />
       <Card pad={15} style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 13 }}>
-        <IconChip name="target" tone="accent" size={42} />
+        <Art src={SPOT.target} size={40} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>너에게 맞는 기회 {catalog.length}개</div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>맞춤 기회 {matched ? `${matched}개` : `${catalog.length}개`}</div>
           <div style={{ fontSize: 11.5, color: 'var(--sub)', marginTop: 2 }}>
-            {interests.length ? <>관심사 일치 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{matched}개</span> · </> : <>{me?.branch || '육군'} · {me?.rank || '병사'} 기준 · </>}
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{urgent}개 마감 임박</span>
+            마감 임박 <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{urgent}개</span>
           </div>
         </div>
         <button onClick={onAddOpp} className="tm-tap" aria-label="기회 직접 추가" style={{ border: 'none', cursor: 'pointer', flexShrink: 0,
@@ -109,57 +105,45 @@ function ExploreList({ onOpenOpp, onAddOpp, soldier }) {
   );
 }
 
+// one illustration, one chip, one reward line (design revamp v2 S4) —
+// everything else lives in the detail sheet
 function OppCard({ o, matched, onClick }) {
   const cc = (cats[o.cat] || { c: 'var(--accent)' }).c;
-  const st = STATUS[o.status] || STATUS.on;
-  const next = o.milestones.flatMap((m) => m.subquests).find((s) => !s.done);
   const urgent = !o.locked && o.dday <= 14;
-  const rIcon = o.reward.kind === '휴가' ? 'palm' : o.reward.kind === 'money' ? 'wallet' : o.reward.kind === 'cert' ? 'medal' : 'trophy';
+  // single chip, by priority: 해금 → 마감 임박 → 내 등록 → 맞춤
+  const chip = o.locked ? { txt: `D-${o.unlockDday} 해금`, c: 'var(--faint)', icon: 'shield' }
+    : urgent ? { txt: `D-${o.dday}`, c: 'var(--accent)', icon: 'flame' }
+    : o.mine ? { txt: '내 등록', c: 'var(--sub)', icon: 'pin' }
+    : matched ? { txt: '맞춤', c: 'var(--positive)', icon: 'heart' }
+    : null;
   return (
-    <Card onClick={onClick} pad={0} style={{ overflow: 'hidden' }}>
-      <div style={{ position: 'relative', height: 128, background: `linear-gradient(120deg, ${cc}30, var(--surface2))` }}>
-        <img src={o.img} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,9,11,.22) 0%, rgba(8,9,11,0) 34%, rgba(8,9,11,.52) 66%, rgba(8,9,11,.88) 100%)' }} />
-        <div style={{ position: 'absolute', top: 11, left: 12, right: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 800, color: '#fff',
-            padding: '4px 9px', borderRadius: 999, background: 'rgba(10,11,13,.46)', boxShadow: `inset 0 0 0 1px ${cc}` }}>
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: cc }} />{o.cat}
-          </span>
-          {o.mine && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: '#fff', padding: '4px 8px', borderRadius: 999, background: 'rgba(10,11,13,.62)' }}>{Icon('pin', { size: 11, color: '#fff', stroke: 2.2 })}내 등록</span>}
-          {!o.mine && matched && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: '#fff', padding: '4px 8px', borderRadius: 999, background: 'rgba(var(--positive-rgb),.88)' }}>{Icon('heart', { size: 11, color: '#fff', stroke: 2.2 })}맞춤</span>}
-          {!o.mine && !matched && o.hot && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 800, color: '#fff', padding: '4px 8px', borderRadius: 999, background: 'rgba(var(--accent-rgb),.92)' }}>{Icon('flame', { size: 11, color: '#fff', stroke: 2.4 })}주목</span>}
-          {o.locked ? (
-            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#fff',
-              padding: '4px 9px', borderRadius: 999, background: 'rgba(10,11,13,.62)' }}>
-              {Icon('shield', { size: 11, color: '#fff', stroke: 2.2 })}D-{o.unlockDday} 해금
-            </span>
-          ) : (
-            <span className="mono" style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#fff',
-              padding: '4px 9px', borderRadius: 999, background: urgent ? 'rgba(var(--accent-rgb),.94)' : 'rgba(10,11,13,.52)' }}>D-{o.dday}</span>
+    <Card onClick={onClick} pad={14} style={{ opacity: o.locked ? 0.66 : 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: `${cc}14`, boxShadow: `inset 0 0 0 1px ${cc}2e` }}>
+          <Art src={o.locked ? SPOT.locked : (CAT_ART[o.cat] || SPOT.target)} size={38} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-.015em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{o.title}</span>
+            {chip && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800, color: chip.c, flexShrink: 0,
+                padding: '2px 8px', borderRadius: 999, background: 'var(--surface2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                {Icon(chip.icon, { size: 10.5, color: chip.c, stroke: 2.2 })}{chip.txt}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--sub)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{o.reward.finish}</span> · {o.sub}
+          </div>
+          {o.started && o.fill > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <div style={{ flex: 1 }}><ProgressBar pct={o.fill} height={5} color="var(--accent)" /></div>
+              <span className="num" style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--sub)', flexShrink: 0 }}>{o.fill}%</span>
+            </div>
           )}
         </div>
-        <div style={{ position: 'absolute', left: 14, right: 14, bottom: 12 }}>
-          <div style={{ fontSize: 17.5, fontWeight: 800, letterSpacing: '-.02em', color: '#fff', textShadow: '0 1px 14px rgba(0,0,0,.55)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.title}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 800, color: '#fff', padding: '3px 9px', borderRadius: 999, background: 'rgba(var(--accent-rgb),.94)' }}>
-              {Icon(rIcon, { size: 12.5, color: '#fff', stroke: 2.2 })}{o.reward.finish}
-            </span>
-            <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{o.sub}</span>
-          </div>
-        </div>
-      </div>
-      <div style={{ padding: '13px 15px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ width: 7, height: 7, borderRadius: 999, background: st.c, flexShrink: 0, boxShadow: `0 0 7px ${st.c}` }} />
-          <div style={{ flex: 1 }}><ProgressBar pct={o.fill} height={7} color={st.c} marker={o.expectedPct} /></div>
-          <span className="num" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--sub)', flexShrink: 0 }}>{o.fill}%</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--faint)', flexShrink: 0 }}>다음</span>
-          <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{next ? next.text : '완료됨 🎉'}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>경로 {Icon('chevR', { size: 13, color: 'var(--accent)' })}</span>
-        </div>
+        {Icon('chevR', { size: 16, color: 'var(--faint)' })}
       </div>
     </Card>
   );

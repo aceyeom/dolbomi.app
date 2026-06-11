@@ -9,7 +9,7 @@ import { CreatureHero, CREATURE_PATHS } from './CreatureHero';
 // `rewards` are cosmetic/prestige only — features are never gated.
 const BANDS = [
   { min: 0,   label: '각성기', rewards: [] },
-  { min: 40,  label: '성장기', rewards: ['팔레트 「택티컬」'] },
+  { min: 40,  label: '성장기', rewards: ['팔레트 「골드」'] },
   { min: 140, label: '성체',   rewards: ['동료 수호신 해금', '팔레트 「스틸」'] },
   { min: 300, label: '정예',   rewards: ['칭호 「정예」'] },
   { min: 480, label: '수호신', rewards: ['칭호 「수호신의 주인」', '황금화 완성'] },
