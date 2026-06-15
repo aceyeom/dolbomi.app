@@ -1,17 +1,23 @@
-# DOLBOMI — Supabase backend
+# Supabase backend
 
-The whole backend: Postgres schema, row-level security, and the game-logic RPCs.
-Apply these to a Supabase project (Seoul region) per
-[../DEPLOYMENT.md](../DEPLOYMENT.md).
+The backend for both sites in this repo. Apply to a Supabase project (Seoul
+region). **DOLBOMI** (archived) uses `0001`–`0005` + `seed.sql` per
+[../DEPLOYMENT.md](../DEPLOYMENT.md); **STILL.** (live) adds `0006_still.sql` +
+`functions/still-notify` per [../DEPLOYMENT-STILL.md](../DEPLOYMENT-STILL.md).
+
+`0006` is purely additive — it creates only `still_*` objects and modifies none
+of the DOLBOMI tables, so it is safe to run on the live database.
 
 ## Files (run in this order)
 
 | # | File | What it does |
 | --- | --- | --- |
-| 1 | `migrations/0001_init.sql` | reference + per-user tables, RLS policies |
-| 2 | `migrations/0002_functions.sql` | `SECURITY DEFINER` RPCs (the game logic) |
+| 1 | `migrations/0001_init.sql` | DOLBOMI reference + per-user tables, RLS policies |
+| 2 | `migrations/0002_functions.sql` | DOLBOMI `SECURITY DEFINER` RPCs (the game logic) |
 | 3 | `migrations/0003_onboarding_user_opps.sql` | onboarding profile fields (병과·관심사·role), interest tags, user-created opportunities + admin review RPCs |
-| 4 | `seed.sql` | reference content (catalog/benefits/titles/quest pool) — **generated** |
+| 4 | `migrations/0004_design_revamp.sql`, `0005_design_revamp_v2.sql` | DOLBOMI design-revamp schema tweaks |
+| 5 | `seed.sql` | DOLBOMI reference content (catalog/benefits/titles/quest pool) — **generated** |
+| 6 | `migrations/0006_still.sql` | **STILL.** — `still_*` tables, `still_submit` RPC, RLS (additive) |
 
 All are idempotent (`if not exists` / `create or replace` / `truncate`),
 so re-running is safe. **Note:** `seed.sql` now writes the `tags` columns, so
