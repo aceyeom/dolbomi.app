@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { submitStill, normHandle, isValidHandle } from './api/still.js'
-import { makeColors } from './components/ui.jsx'
+import { makeColors, GalaxyCanvas, WarmBg } from './components/ui.jsx'
 import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen } from './components/screens.jsx'
 
 // Galaxy-edition config. Palette = [you, them]; motion drives the starfield swirl.
@@ -17,14 +17,22 @@ const SCREENS = {
   match: MatchScreen,
   pricing: PricingScreen,
 }
-const STORE = 'celeste:v1'
-const SITE = typeof window !== 'undefined' ? window.location.origin : 'https://dolbomi.app'
 
-const OPENERS = [
-  "there's a website that tells you if your ex still thinks about you and i've been staring at it for an hour",
-  "you both have to enter each other's @. so if it's one-sided… they never know you looked 👀",
-  "this only works if we ALL make it go viral — your ex won't show up unless it reaches them 🙏",
-]
+// One persistent background lives at the App level so it never remounts between
+// screens — the galaxy keeps spinning and your stars stay put. Each screen just
+// declares which backdrop it wants and we cross-fade the warm overlay on top of
+// the always-running galaxy canvas.
+const BG = {
+  landing: { warm: false, mode: 'idle', dim: 0.62 },
+  you: { warm: true, variant: 'quiet', mode: 'idle' },
+  them: { warm: true, variant: 'low', mode: 'idle' },
+  sendoff: { warm: false, mode: 'sendoff' },
+  resting: { warm: false, mode: 'resting' },
+  match: { warm: false, mode: 'match' },
+  pricing: { warm: true, variant: 'quiet', mode: 'idle' },
+}
+
+const STORE = 'celeste:v1'
 
 export default function App() {
   const C = useMemo(() => makeColors(PALETTE), [])
@@ -46,15 +54,17 @@ export default function App() {
   const [them, setThem] = useState(init.them || '')
   const [sealedAt, setSealedAt] = useState(init.sealedAt || null)
   const [matched, setMatched] = useState(init.matched || false)
+  // How many people you've sent off — drives the count of resting stars.
+  const [sealCount, setSealCount] = useState(init.sealCount || 0)
   const [error, setError] = useState('')
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, them, sealedAt, matched }))
+      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, them, sealedAt, matched, sealCount }))
     } catch {
       /* private mode / quota — fine to skip */
     }
-  }, [screen, email, me, them, sealedAt, matched])
+  }, [screen, email, me, them, sealedAt, matched, sealCount])
 
   const go = useCallback((s) => {
     setScreen(s)
@@ -74,12 +84,14 @@ export default function App() {
       return
     }
     setSealedAt(Date.now())
+    setSealCount((n) => n + 1) // a new star to fly out and join the field
     go('sendoff')
     const minSuspense = new Promise((r) => setTimeout(r, 3200))
     try {
       const [res] = await Promise.all([submitStill({ me, ex: them, email }), minSuspense])
       if (res?.error === 'rate_limited') {
         setError('Whoa — slow down. Too many checks in a short time. Try again in a little while.')
+        setSealCount((n) => Math.max(0, n - 1)) // never landed — take the star back
         go('them')
         return
       }
@@ -89,6 +101,7 @@ export default function App() {
     } catch (e) {
       console.error(e)
       setMatched(false)
+      setSealCount((n) => Math.max(0, n - 1))
       setError('Something went wrong. Try again.')
       go('them')
     }
@@ -102,24 +115,11 @@ export default function App() {
     go('them')
   }, [go])
 
-  const share = useCallback(async () => {
-    const text = OPENERS[Math.floor(Math.random() * OPENERS.length)]
-    const payload = { title: 'CELESTE', text, url: SITE }
-    try {
-      if (navigator.share) {
-        await navigator.share(payload)
-        return false // native sheet handled it; no "copied" confirmation needed
-      }
-    } catch {
-      /* user dismissed — fall through to copy */
-    }
-    try {
-      await navigator.clipboard.writeText(`${text}\n${SITE}`)
-      return true
-    } catch {
-      return false
-    }
-  }, [])
+  // Demo only: preview the mutual reveal without a real match. Remove later.
+  const previewMatch = useCallback(() => {
+    setMatched(true)
+    go('match')
+  }, [go])
 
   const openConversation = useCallback(() => {
     const handle = normHandle(them)
@@ -127,12 +127,43 @@ export default function App() {
   }, [them])
 
   const screenT = { motion: MOTION, head: HEAD }
-  const ctx = { email, me, them, sealedAt, matched, error, setEmail, setMe, setThem, go, seal, checkAnother, share, openConversation }
+  const ctx = { email, me, them, sealedAt, matched, error, setEmail, setMe, setThem, go, seal, checkAnother, previewMatch, openConversation }
   const Screen = SCREENS[screen] || SCREENS.landing
+
+  const bg = BG[screen] || BG.landing
+  // Hold the last warm variant so the overlay doesn't flash a different gradient
+  // while it fades out over the galaxy.
+  const warmVariant = useRef('quiet')
+  if (bg.warm) warmVariant.current = bg.variant
 
   return (
     <div className="still-app">
-      <div key={screen} className="fade" data-screen={screen}>
+      {/* persistent galaxy — one instance for the whole session */}
+      <GalaxyCanvas
+        mode={bg.mode}
+        dim={bg.dim}
+        seals={sealCount}
+        you={C.you}
+        them={C.them}
+        motion={MOTION}
+        style={{ position: 'fixed', zIndex: 0 }}
+      />
+      {/* warm gradient overlay — cross-fades in on the calm entry screens */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1,
+          pointerEvents: 'none',
+          opacity: bg.warm ? 1 : 0,
+          transition: 'opacity .6s ease',
+        }}
+      >
+        <WarmBg C={C} variant={warmVariant.current} />
+      </div>
+
+      <div key={screen} className="fade" data-screen={screen} style={{ position: 'relative', zIndex: 4 }}>
         <Screen C={C} t={screenT} ctx={ctx} />
       </div>
     </div>

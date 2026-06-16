@@ -33,8 +33,9 @@ const COL = { cream: '#EFEAF2', warm: '#F6D9C4', cool: '#CBD8F2' }
 
 // camera / projection
 const CAM = 2.7 // camera distance from galactic center
-const FOCAL = 2.5 // focal length (bigger = flatter / less perspective)
+const FOCAL = 2.35 // focal length (bigger = flatter / less perspective)
 const TILT = 1.04 // base disk tilt toward the camera (rad)
+const GOLDEN = 2.39996323 // golden angle — even, non-repeating slot placement
 
 export class GalaxyField {
   constructor(canvas, opts = {}) {
@@ -57,10 +58,13 @@ export class GalaxyField {
     this.pTarget = { x: 0, y: 0 }
     this.p = { x: 0, y: 0 }
     this.glows = { you: makeGlow(this.you, 64), them: makeGlow(this.them, 64), warm: makeGlow('#FFE0C2', 64), white: makeGlow('#FFFFFF', 64) }
-    const count = opts.count || (window.innerWidth < 540 ? 1100 : 1700)
+    const count = opts.count || (window.innerWidth < 540 ? 1300 : 2200)
     this._gen(count)
     this.trail = []
     this.burst = null
+    // Each sealed person becomes a persistent star resting in the disk; the set
+    // stacks across the session so "more people → more stars".
+    this.sealed = []
     this._bind()
     this.resize()
   }
@@ -96,13 +100,13 @@ export class GalaxyField {
     }
     // Foreground dust in a larger volume — gives strong near-field parallax.
     this.dust = []
-    const dn = Math.floor(n * 0.4)
+    const dn = Math.floor(n * 0.5)
     for (let i = 0; i < dn; i++) {
       this.dust.push({
-        px: (rnd() - 0.5) * 3.4,
-        py: (rnd() - 0.5) * 2.2,
-        pz: (rnd() - 0.5) * 3.4,
-        rad: 0.4 + rnd() * 0.8,
+        px: (rnd() - 0.5) * 4.2,
+        py: (rnd() - 0.5) * 2.6,
+        pz: (rnd() - 0.5) * 4.2,
+        rad: 0.4 + rnd() * 0.9,
         base: 0.08 + rnd() * 0.26,
         tw: rnd() * 6.28,
         tws: 0.1 + rnd() * 0.4,
@@ -136,7 +140,11 @@ export class GalaxyField {
     this.canvas.width = this.w * this.dpr
     this.canvas.height = this.h * this.dpr
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
-    this.unit = Math.min(this.w, this.h) * 0.62
+    // Spread the field so the disk spills past the frame on wide monitors as
+    // well as tall phones — it should read as a window into a much bigger space,
+    // not a single contained shape. (Star pixel sizes don't scale with unit, so
+    // this widens the field rather than zooming it.)
+    this.unit = Math.min(this.w, this.h) * 0.82 + Math.max(this.w, this.h) * 0.06
     this.cx = this.w / 2
     this.cy = this.h * 0.44
   }
@@ -150,7 +158,7 @@ export class GalaxyField {
       this.dimTarget = 0.62
       if (changed) this.trail = []
     }
-    if (mode === 'resting') this.dimTarget = 0.18
+    if (mode === 'resting') this.dimTarget = 0.22
     if (mode === 'match') {
       this.dimTarget = 0.16
       if (changed) this.burst = null
@@ -180,6 +188,24 @@ export class GalaxyField {
     this.them = them
     this.glows.you = makeGlow(you, 64)
     this.glows.them = makeGlow(them, 64)
+  }
+
+  // Match the resting set to the number of people sealed. Growing is the common
+  // case (each seal adds a star); it can also shrink by one when a send-off
+  // fails and the app rolls the count back, so the failed star doesn't linger.
+  // Slots are a pure function of index, so trimming the tail is stable.
+  setSeals(n) {
+    while (this.sealed.length < n) {
+      const i = this.sealed.length
+      const ring = i % 3
+      this.sealed.push({
+        theta0: i * GOLDEN, // disk angle; galaxy spin orbits it for free
+        r: 0.34 + ring * 0.15, // staggered radii so they sit at different depths
+        y: (i % 2 ? 1 : -1) * (0.045 + ring * 0.02), // above / below the plane
+        phase: i * 1.7, // desynced twinkle
+      })
+    }
+    if (this.sealed.length > n) this.sealed.length = Math.max(0, n)
   }
 
   // Rotate a local point into view space (spin → parallax yaw → tilt), then
@@ -214,9 +240,9 @@ export class GalaxyField {
 
   _rot() {
     // auto-drift keeps the camera alive without any input; pointer steers it.
-    const driftY = Math.sin(this.t * 0.12) * 0.06
-    const yaw = this.p.x * 0.22 + driftY
-    const tilt = TILT + this.p.y * 0.14 + Math.sin(this.t * 0.09) * 0.02
+    const driftY = Math.sin(this.t * 0.12) * 0.07
+    const yaw = this.p.x * 0.32 + driftY
+    const tilt = TILT + this.p.y * 0.2 + Math.sin(this.t * 0.09) * 0.025
     return {
       cosS: Math.cos(this.spin),
       sinS: Math.sin(this.spin),
@@ -303,7 +329,7 @@ export class GalaxyField {
       ctx.drawImage(g, pr.sx - sz / 2, pr.sy - sz / 2, sz, sz)
     }
 
-    this._drawHero(dt)
+    this._drawHero(dt, rot)
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
   }
@@ -321,41 +347,64 @@ export class GalaxyField {
     ctx.fill()
   }
 
-  _drawHero(dt) {
-    const ctx = this.ctx
-    if (this.mode === 'sendoff') {
-      // your star arcs out from the camera into a resting orbit in the disk
-      const D = 1.9,
-        e = easeOut(Math.min(1, this.modeT / D))
-      const sx0 = this.cx,
-        sy0 = this.h * 0.66
-      const tx = this.ox - this.unit * 0.34,
-        ty = this.oy - this.unit * 0.12
-      const mx = (sx0 + tx) / 2 + (ty - sy0) * 0.3
-      const my = (sy0 + ty) / 2 - (tx - sx0) * 0.3
-      const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * mx + e * e * tx
-      const y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * my + e * e * ty
-      this.trail.push([x, y])
-      if (this.trail.length > 24) this.trail.shift()
-      ctx.globalCompositeOperation = 'lighter'
-      for (let i = 0; i < this.trail.length; i++) {
-        const tp = this.trail[i],
-          f = i / this.trail.length,
-          ta = f * 0.32 * (1 - e * 0.5)
-        const sz = 3 + f * 8
-        ctx.globalAlpha = ta
-        ctx.drawImage(this.glows.you, tp[0] - sz, tp[1] - sz, sz * 2, sz * 2)
-      }
-      this._star(x, y, 'you', 2.4 - e * 0.9, 15 - e * 6, 0.65)
-    } else if (this.mode === 'resting') {
-      const t = this.modeT
-      const x = this.cx + Math.cos(t * 0.32) * this.w * 0.05
-      const y = this.h * 0.3 + Math.sin(t * 0.27) * this.h * 0.03
-      const pulse = 0.8 + 0.2 * Math.sin(t * 1.4)
-      this._star(x, y, 'you', 2.0, 13 * pulse, 0.46 * pulse)
-    } else if (this.mode === 'match') {
+  _drawHero(dt, rot) {
+    if (this.mode === 'match') {
       this._drawMatch(dt)
+      return
     }
+    // sendoff flies the newest star into place; every other mode just rests the
+    // whole stacked set so it survives the screen change without a cut.
+    const flying = this.mode === 'sendoff'
+    this._drawSealed(rot, flying)
+    if (flying) this._drawFlyIn(rot)
+  }
+
+  // Position of a sealed star in 3D disk space. _project applies the galaxy
+  // spin, so each one quietly orbits the core and shares the field's parallax.
+  _sealedAt(s, rot) {
+    return this._project(Math.cos(s.theta0) * s.r, s.y, Math.sin(s.theta0) * s.r, rot)
+  }
+
+  _drawSealed(rot, excludeLast) {
+    const n = this.sealed.length
+    for (let i = 0; i < n; i++) {
+      if (excludeLast && i === n - 1) continue
+      const pr = this._sealedAt(this.sealed[i], rot)
+      if (!pr) continue
+      const pulse = 0.78 + 0.22 * Math.sin(this.t * 1.3 + this.sealed[i].phase)
+      const sh = clamp(pr.shade, 0.45, 1.2)
+      this._star(pr.sx, pr.sy, 'you', Math.max(1.1, 1.9 * pr.persp), 12 * pr.persp * pulse, 0.5 * pulse * sh)
+    }
+  }
+
+  _drawFlyIn(rot) {
+    const s = this.sealed[this.sealed.length - 1]
+    if (!s) return
+    const ctx = this.ctx
+    const D = 1.9,
+      e = easeOut(Math.min(1, this.modeT / D))
+    const pr = this._sealedAt(s, rot)
+    const tx = pr ? pr.sx : this.ox,
+      ty = pr ? pr.sy : this.oy
+    const sx0 = this.cx,
+      sy0 = this.h * 0.72
+    const mx = (sx0 + tx) / 2 + (ty - sy0) * 0.28
+    const my = (sy0 + ty) / 2 - (tx - sx0) * 0.28
+    const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * mx + e * e * tx
+    const y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * my + e * e * ty
+    this.trail.push([x, y])
+    if (this.trail.length > 26) this.trail.shift()
+    ctx.globalCompositeOperation = 'lighter'
+    for (let i = 0; i < this.trail.length; i++) {
+      const tp = this.trail[i],
+        f = i / this.trail.length,
+        ta = f * 0.34 * (1 - e * 0.45)
+      const sz = 3 + f * 8
+      ctx.globalAlpha = ta
+      ctx.drawImage(this.glows.you, tp[0] - sz, tp[1] - sz, sz * 2, sz * 2)
+    }
+    // hand off seamlessly: at e=1 this matches the resting size in _drawSealed
+    this._star(x, y, 'you', 2.4 - e * 0.6, 16 - e * 4, 0.62)
   }
 
   // Two stars sweep in from opposite sides, meet at the core in a glowing
