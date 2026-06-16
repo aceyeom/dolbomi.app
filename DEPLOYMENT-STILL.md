@@ -26,16 +26,26 @@ This creates `still_entries`, `still_matches`, `still_notifications`, the
 `still_submit` RPC, and `still_norm`. It is idempotent and touches no existing
 table. (No seed needed.)
 
+Then run the safety hardening (rate limiting + anti-exfiltration on the match
+email — also idempotent, `CREATE OR REPLACE`s `still_submit`):
+
+```
+supabase/migrations/0007_still_safety.sql
+```
+
 Sanity check it works:
 
 ```sql
-select still_submit('@me','@you', null);            -- {"matched": false}
-select still_submit('@you','@me','test@email.com');  -- {"matched": true, "them": "@me"}
-select * from still_matches;                          -- one row
-select * from still_notifications;                    -- one pending email
+select still_submit('@me','@you','early@email.com');  -- {"matched": false}  (earlier entrant, leaves the app)
+select still_submit('@you','@me','live@email.com');   -- {"matched": true, "them": "@me"}  (live submitter)
+select * from still_matches;                            -- one row
+-- after 0007: ONE notification, to the EARLIER entrant (me / early@email.com).
+-- the address typed on the triggering call (live@email.com) is never queued.
+select self_handle, to_email from still_notifications;  -- me | early@email.com
 -- clean up the test rows when done:
 delete from still_entries where from_handle in ('me','you');
 delete from still_matches where handle_a in ('me','you') or handle_b in ('me','you');
+delete from still_attempts where from_handle in ('me','you');
 ```
 
 ## 2. Supabase — match-notification emails (Resend)

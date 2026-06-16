@@ -1,4 +1,4 @@
-# STILL. — does your ex still think about you?
+# CELESTE — does your ex still think about you?
 
 A viral web app ("galaxy edition"). You enter your Instagram @ and your ex's @.
 You only ever find out it's mutual if **they** independently enter **you** back —
@@ -7,7 +7,11 @@ never revealed to anyone.
 
 Live at **https://dolbomi.app/** (the previous DOLBOMI app is archived at
 [`/dolbomi`](https://dolbomi.app/dolbomi)). The UI is fully responsive: full-bleed
-on a phone, and the same intimate column centered over the starfield on the web.
+on a phone, and the same intimate column centered over the 3D starfield on the web.
+
+> **Name:** the product is **CELESTE**. The Supabase objects, this `still-app/`
+> folder, and the `still-notify` function keep their original `still_*` names for
+> continuity with the live database — only the brand/UI is renamed.
 
 ## Flow
 
@@ -28,9 +32,10 @@ State persists in `localStorage`, so a refresh resumes where you left off.
 
 ## Stack
 
-Same toolchain and **same Supabase project** as DOLBOMI — STILL. only adds the
-`still_*` tables/RPC (`supabase/migrations/0006_still.sql`) and one edge function
-(`supabase/functions/still-notify`). No existing table is touched.
+Same toolchain and **same Supabase project** as DOLBOMI — CELESTE only adds the
+`still_*` tables/RPC (`supabase/migrations/0006_still.sql`, hardened in
+`0007_still_safety.sql`) and one edge function (`supabase/functions/still-notify`).
+No existing table is touched.
 
 | Layer | Service |
 | --- | --- |
@@ -45,8 +50,27 @@ Same toolchain and **same Supabase project** as DOLBOMI — STILL. only adds the
 3. It returns **only** `{ matched: true|false }` for *your* pair — the client can
    never read who entered whom (the tables have RLS on and zero policies; the only
    way in is the `SECURITY DEFINER` RPC).
-4. On a mutual match it queues an email to each side that left one; the
-   `still-notify` edge function sends them via Resend.
+4. On a mutual match it queues an email to the **earlier** entrant (who has left
+   the app); the live submitter already sees the result on screen. It never emails
+   the address supplied on the request that triggers the match, which closes the
+   instant email-exfiltration path (see Safety).
+5. The `still-notify` edge function sends queued emails via Resend.
+
+## Safety
+
+`0007_still_safety.sql` adds the two cheap mitigations from the memo (§2.1/§3)
+that don't need handle-ownership verification:
+
+- **Rate limiting** — per-IP (40/hr) and per-handle (20/hr) caps on `still_submit`,
+  so the "enter everyone to see who's into me" sweep trips a limit fast. The RPC
+  returns `{ matched: false, error: 'rate_limited' }` when throttled.
+- **No email exfiltration** — the match email only ever goes to the earlier
+  entrant, never to an address typed on the triggering request, so an impersonator
+  can't have a target's private feeling mailed to their own inbox.
+
+The **complete** fix for impersonation (the on-screen `matched:true` can still
+confirm a single target to a determined impersonator) is handle-ownership
+verification — Instagram OAuth or a one-time code — tracked as the next P0.
 
 ## Run it locally
 
@@ -66,7 +90,7 @@ The repo-root build (`../package.json`) produces both apps into `../dist`:
 
 ```bash
 cd ..
-npm run build        # STILL → dist/ , dolbomi → dist/dolbomi/
+npm run build        # CELESTE → dist/ , dolbomi → dist/dolbomi/
 ```
 
 See [../DEPLOYMENT-STILL.md](../DEPLOYMENT-STILL.md) for the go-live steps.

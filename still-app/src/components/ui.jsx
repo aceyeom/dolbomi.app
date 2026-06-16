@@ -1,4 +1,4 @@
-// ui.jsx — warm minimal primitives for STILL. (galaxy edition).
+// ui.jsx — warm minimal primitives for CELESTE (galaxy edition).
 import * as React from 'react'
 import { GalaxyField } from '../galaxy.js'
 
@@ -88,7 +88,7 @@ export function Brandmark({ C, size = 14 }) {
           animation: 'breathe 4s ease-in-out infinite',
         }}
       />
-      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: size, letterSpacing: '6px', color: C.cream, paddingLeft: 2 }}>STILL</span>
+      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: size, letterSpacing: '5px', color: C.cream, paddingLeft: 2 }}>CELESTE</span>
     </div>
   )
 }
