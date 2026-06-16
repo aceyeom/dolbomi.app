@@ -1,52 +1,36 @@
 // screens.jsx — CELESTE (galaxy edition) screens. Responsive: each shell fills the
 // viewport and centers a max-width column, so the same flow reads full-bleed on a
-// phone and as an intimate centered column on the web.
+// phone and as an intimate centered column on the web. The backgrounds (the
+// persistent galaxy + the warm overlay) are owned by App so they never remount
+// between screens — these shells only lay out the foreground content.
 import * as React from 'react'
-import { WarmBg, GalaxyCanvas, Brandmark, Sonar, PrimaryButton, GhostButton, Field, HandleChip, StepDots, BackBtn, Icon, rgba } from './ui.jsx'
+import { Brandmark, Sonar, PrimaryButton, GhostButton, Field, HandleChip, StepDots, BackBtn, Icon, rgba } from './ui.jsx'
 
 // Shared centered column: at least one dynamic-viewport tall (so the flex
 // spacers fill the screen on phone and desktop alike), but free to grow taller
 // when content or an open keyboard demands it — the page scrolls rather than
-// clipping. The background is a separate fixed layer behind this.
+// clipping. The column is capped so it stays an intimate measure on wide
+// monitors instead of stretching edge to edge.
 function ShellInner({ children }) {
   return (
     <div
       style={{
-        position: 'relative',
-        zIndex: 4,
         minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: 'max(40px, env(safe-area-inset-top)) 24px max(28px, env(safe-area-inset-bottom))',
+        padding: 'max(40px, env(safe-area-inset-top)) clamp(20px, 5vw, 40px) max(28px, env(safe-area-inset-bottom))',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 440, flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
+      <div style={{ width: '100%', maxWidth: 460, flex: 1, display: 'flex', flexDirection: 'column' }}>{children}</div>
     </div>
   )
 }
 
-// galaxy-backed shell (fixed canvas behind content)
-function GalaxyShell({ C, t, mode, dim, children }) {
-  return (
-    <>
-      <GalaxyCanvas mode={mode} dim={dim} you={C.you} them={C.them} motion={t.motion} style={{ position: 'fixed' }} />
-      <ShellInner>{children}</ShellInner>
-    </>
-  )
-}
-
-// warm-gradient shell (calm entry screens)
-function WarmShell({ C, variant, children }) {
-  return (
-    <>
-      <div style={{ position: 'fixed', inset: 0 }}>
-        <WarmBg C={C} variant={variant} />
-      </div>
-      <ShellInner>{children}</ShellInner>
-    </>
-  )
-}
+// Both shells are now just the centered column — App paints the backdrop behind
+// them — but the named wrappers are kept so each screen still reads its intent.
+const GalaxyShell = ({ children }) => <ShellInner>{children}</ShellInner>
+const WarmShell = ({ children }) => <ShellInner>{children}</ShellInner>
 
 // ── 1 · LANDING ──────────────────────────────────────────────
 export function LandingScreen({ C, t, ctx }) {
@@ -211,16 +195,8 @@ export function SendoffScreen({ C, t }) {
   )
 }
 
-// ── 5 · RESTING (one calm dot — the pending forward-loop) ─────
+// ── 5 · RESTING (your star joins the field — the pending forward-loop) ─────
 export function RestingScreen({ C, t, ctx }) {
-  const [copied, setCopied] = React.useState(false)
-  const onShare = async () => {
-    const ok = await ctx.share()
-    if (ok) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    }
-  }
   return (
     <GalaxyShell C={C} t={t} mode="resting">
       <div className="enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -233,46 +209,39 @@ export function RestingScreen({ C, t, ctx }) {
 
       <div style={{ flex: 1, minHeight: 150 }} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
-        <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 34, lineHeight: 1.14, color: C.cream }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+        <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(30px, 7vw, 38px)', lineHeight: 1.14, color: C.cream }}>
           It’s out there now.
         </h2>
-        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 13.5, lineHeight: 1.55, color: C.muted, maxWidth: 270 }}>
-          We’ll tell you the moment <HandleChip C={C} handle={ctx.them || 'them'} color={C.them} /> looks back.
+        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14, lineHeight: 1.55, color: C.muted, maxWidth: 300 }}>
+          Your star is in the sky. We’ll tell you the moment <HandleChip C={C} handle={ctx.them || 'them'} color={C.them} /> looks back.
         </p>
       </div>
 
-      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 26 }}>
-        <div style={{ borderRadius: 16, padding: 16, background: `linear-gradient(145deg, ${rgba(C.you, 0.12)}, ${rgba(C.them, 0.1)})`, border: `1px solid ${rgba(C.you, 0.2)}` }}>
-          <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 18, color: C.cream, lineHeight: 1.25 }}>They can’t enter you back if they’re not here yet.</div>
-          <button
-            onClick={onShare}
-            style={{
-              marginTop: 14,
-              width: '100%',
-              padding: '12px',
-              borderRadius: 12,
-              cursor: 'pointer',
-              background: C.cream,
-              border: 'none',
-              color: '#1a0f0a',
-              fontWeight: 600,
-              fontSize: 14,
-              fontFamily: "'Space Grotesk', sans-serif",
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 9,
-            }}
-          >
-            <Icon name={copied ? 'check' : 'share'} size={16} color="#1a0f0a" /> {copied ? 'link copied — go post it' : 'Share your link'}
-          </button>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <GhostButton C={C} onClick={() => ctx.go('pricing')}>
-            check someone else · $2.99 →
-          </GhostButton>
-        </div>
+      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 28 }}>
+        <GhostButton C={C} onClick={() => ctx.checkAnother()}>
+          check someone else →
+        </GhostButton>
+        {/* DEMO ONLY — preview the mutual reveal. Remove before launch. */}
+        <button
+          onClick={() => ctx.previewMatch()}
+          style={{
+            background: 'none',
+            border: `1px dashed ${rgba(C.them, 0.4)}`,
+            borderRadius: 999,
+            cursor: 'pointer',
+            padding: '7px 14px',
+            color: C.muted,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 11,
+            letterSpacing: '.5px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          <Icon name="eye" size={13} color={C.them} /> demo · see a match
+        </button>
       </div>
     </GalaxyShell>
   )
@@ -285,7 +254,7 @@ export function MatchScreen({ C, t, ctx }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minHeight: 420 }}>
         <div className="enter" style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 11, letterSpacing: '4px', textTransform: 'uppercase', color: C.you, marginBottom: 12 }}>✦ it’s mutual</div>
-          <h1 style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 38, lineHeight: 1.1, color: C.cream }}>
+          <h1 style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(30px, 8vw, 42px)', lineHeight: 1.1, color: C.cream }}>
             They still think<br />
             <em style={{ color: C.them }}>about you too.</em>
           </h1>
@@ -315,13 +284,22 @@ export function MatchScreen({ C, t, ctx }) {
 
 // ── 7 · PRICING ──────────────────────────────────────────────
 export function PricingScreen({ C, t, ctx }) {
-  const Row = ({ price, priceColor, sub, body, last }) => (
-    <div style={{ padding: '22px 0', borderBottom: last ? 'none' : `1px solid ${C.line}` }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 34, color: priceColor || C.cream, lineHeight: 1 }}>{price}</span>
-        <span style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: C.muted, fontFamily: "'Space Mono', monospace" }}>{sub}</span>
+  const Line = ({ label, note, value, accent, last }) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        gap: 16,
+        padding: '20px 0',
+        borderBottom: last ? 'none' : `1px solid ${C.line}`,
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 15, color: C.cream, fontWeight: 500 }}>{label}</div>
+        <div style={{ fontSize: 12.5, color: C.muted, marginTop: 3 }}>{note}</div>
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, color: C.muted, maxWidth: 320 }}>{body}</p>
+      <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 26, color: accent || C.cream, whiteSpace: 'nowrap', lineHeight: 1 }}>{value}</div>
     </div>
   )
   return (
@@ -332,21 +310,19 @@ export function PricingScreen({ C, t, ctx }) {
         <div style={{ width: 38 }} />
       </div>
 
-      <div style={{ marginTop: 30 }}>
-        <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 33, lineHeight: 1.14, color: C.cream }}>
-          We charge for the<br />
-          <em style={{ color: C.you }}>curiosity</em> — never for<br />
-          the feelings.
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
+        <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(28px, 7vw, 36px)', lineHeight: 1.16, color: C.cream }}>
+          We charge for the <em style={{ color: C.you }}>curiosity</em> — never the feelings.
         </h2>
+
+        <div className="enter" style={{ animationDelay: '.08s' }}>
+          <Line label="Your first ping" note="One person, on us." value="Free" accent={C.you} />
+          <Line label="Each extra person" note="The next one you can’t shake." value="$2.99" />
+          <Line label="The reveal" note="The answer is never paywalled." value="Free" accent={C.you} last />
+        </div>
       </div>
 
-      <div className="enter" style={{ animationDelay: '.08s', marginTop: 16 }}>
-        <Row price="1 free" priceColor={C.you} sub="ping" body="Everyone gets one person, free. The taste that creates the itch." />
-        <Row price="+$2.99" sub="per extra person" body="Your situationship. The one that got away. Pay per ping." />
-        <Row price="Always free" sub="the reveal" last body="Gating the answer behind a paywall would destroy the whole promise — and invite faked matches. We never do it." />
-      </div>
-
-      <div className="enter" style={{ animationDelay: '.16s', marginTop: 26 }}>
+      <div className="enter" style={{ animationDelay: '.16s' }}>
         <PrimaryButton C={C} onClick={() => (ctx.sealedAt ? ctx.checkAnother() : ctx.go('you'))}>{ctx.sealedAt ? 'Check another person' : 'Start with my free one'}</PrimaryButton>
       </div>
     </WarmShell>

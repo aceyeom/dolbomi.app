@@ -42,12 +42,13 @@ export function WarmBg({ C, variant = 'center', children }) {
 }
 
 // React wrapper around the canvas GalaxyField
-export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, style }) {
+export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals = 0, style }) {
   const ref = React.useRef(null)
   const field = React.useRef(null)
   React.useEffect(() => {
     const f = new GalaxyField(ref.current, { you, them, motion })
     field.current = f
+    f.setSeals(seals)
     f.setMode(mode, { dim })
     f.start()
     let ro
@@ -63,6 +64,9 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, style
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  React.useEffect(() => {
+    if (field.current) field.current.setSeals(seals)
+  }, [seals])
   React.useEffect(() => {
     if (field.current) field.current.setMode(mode, { dim })
   }, [mode, dim])
