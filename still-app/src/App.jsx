@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { submitStill, normHandle, isValidHandle } from './api/still.js'
-import { makeColors, GalaxyCanvas, WarmBg, StarTag, Liftoff } from './components/ui.jsx'
+import { makeColors, GalaxyCanvas, WarmBg, StarTags, Liftoff } from './components/ui.jsx'
 import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen } from './components/screens.jsx'
 
 // Galaxy-edition config. Palette = [you, them]; motion drives the starfield swirl.
@@ -62,6 +62,14 @@ export default function App() {
   const [matched, setMatched] = useState(init.matched || false)
   // How many people you've sent off — drives the count of resting stars.
   const [sealCount, setSealCount] = useState(init.sealCount || 0)
+  // The @ behind each resting star, aligned with the stars by index, so every
+  // one floating in the field carries its own tag. Kept length === sealCount;
+  // older stars from before tags existed pad with '' (no tag).
+  const [handles, setHandles] = useState(() => {
+    const stored = Array.isArray(init.handles) ? init.handles : []
+    const n = init.sealCount || 0
+    return stored.length >= n ? stored.slice(stored.length - n) : [...Array(n - stored.length).fill(''), ...stored]
+  })
   const [error, setError] = useState('')
   // The @ → star morph overlay ({ handle }) and the live galaxy instance the
   // star-tag follows.
@@ -70,11 +78,11 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, them, sealedAt, matched, sealCount }))
+      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, them, sealedAt, matched, sealCount, handles }))
     } catch {
       /* private mode / quota — fine to skip */
     }
-  }, [screen, email, me, them, sealedAt, matched, sealCount])
+  }, [screen, email, me, them, sealedAt, matched, sealCount, handles])
 
   const go = useCallback((s) => {
     setScreen(s)
@@ -95,6 +103,7 @@ export default function App() {
     }
     setSealedAt(Date.now())
     setSealCount((n) => n + 1) // a new star to fly out and join the field
+    setHandles((h) => [...h, normHandle(them)]) // its tag, aligned by index
     // The typed @ ignites into a star (DOM morph) and the galaxy's drift picks it
     // up from the same point — one continuous gesture into the field.
     setMorph({ handle: normHandle(them) })
@@ -106,6 +115,7 @@ export default function App() {
       if (res?.error === 'rate_limited') {
         setError('Whoa — slow down. Too many checks in a short time. Try again in a little while.')
         setSealCount((n) => Math.max(0, n - 1)) // never landed — take the star back
+        setHandles((h) => h.slice(0, -1)) // …and its tag
         go('them')
         return
       }
@@ -116,6 +126,7 @@ export default function App() {
       console.error(e)
       setMatched(false)
       setSealCount((n) => Math.max(0, n - 1))
+      setHandles((h) => h.slice(0, -1))
       setError('Something went wrong. Try again.')
       go('them')
     }
@@ -164,8 +175,8 @@ export default function App() {
         onReady={(f) => (galaxyRef.current = f)}
         style={{ position: 'fixed', zIndex: 0 }}
       />
-      {/* subtle tag that follows your listening star around the field */}
-      <StarTag fieldRef={galaxyRef} handle={them || 'them'} color={C.them} show={screen === 'sendoff' || screen === 'resting'} />
+      {/* subtle @ tags — one per sealed star — floating with them in the field */}
+      <StarTags fieldRef={galaxyRef} handles={handles} color={C.them} show={screen === 'sendoff' || screen === 'resting'} />
       {/* warm gradient overlay — cross-fades in on the calm entry screens */}
       <div
         aria-hidden

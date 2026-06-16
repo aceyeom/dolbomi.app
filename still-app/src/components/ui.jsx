@@ -85,23 +85,26 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals
   return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', ...style }} />
 }
 
-// A subtle handle tag that trails the star we're listening for, so it's always
-// identifiable in the field. Reads the galaxy's live `primaryScreen` each frame
-// and positions itself imperatively (no React re-render churn).
-export function StarTag({ fieldRef, handle, color, show }) {
-  const ref = React.useRef(null)
+// Subtle @handle tags that trail the resting stars — one per sealed person, so
+// every star floating in the field stays identifiable. Reads the galaxy's live
+// per-star `sealedScreen` positions each frame and moves each tag imperatively
+// (no React re-render churn). `handles` is aligned with the stars by index.
+export function StarTags({ fieldRef, handles, color, show }) {
+  const refs = React.useRef([])
   React.useEffect(() => {
     let raf
     const tick = () => {
-      const el = ref.current
       const f = fieldRef.current
-      if (el && f && f.primaryScreen) {
-        const ps = f.primaryScreen
-        const on = show && ps.vis
+      const arr = (f && f.sealedScreen) || []
+      for (let i = 0; i < refs.current.length; i++) {
+        const el = refs.current[i]
+        if (!el) continue
+        const ps = arr[i]
+        const on = show && !!handles[i] && ps && ps.vis
         el.style.opacity = on ? '1' : '0'
         if (on) {
-          const x = clampN(ps.x + 16, 14, window.innerWidth - 14)
-          const y = clampN(ps.y - 30, 18, window.innerHeight - 18)
+          const x = clampN(ps.x + 14, 12, window.innerWidth - 12)
+          const y = clampN(ps.y - 26, 16, window.innerHeight - 16)
           el.style.transform = `translate(${x}px, ${y}px)`
         }
       }
@@ -109,11 +112,12 @@ export function StarTag({ fieldRef, handle, color, show }) {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [show, fieldRef])
+  }, [show, fieldRef, handles])
   const col = color || '#FF8C66'
-  return (
+  return handles.map((h, i) => (
     <div
-      ref={ref}
+      key={i}
+      ref={(el) => (refs.current[i] = el)}
       aria-hidden
       style={{
         position: 'fixed',
@@ -126,11 +130,10 @@ export function StarTag({ fieldRef, handle, color, show }) {
         willChange: 'transform',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        padding: '3px 9px 3px 7px',
+        padding: '3px 10px',
         borderRadius: 999,
         background: 'rgba(10,8,16,0.42)',
-        border: `1px solid ${rgba(col, 0.32)}`,
+        border: `1px solid ${rgba(col, 0.3)}`,
         backdropFilter: 'blur(2px)',
         WebkitBackdropFilter: 'blur(2px)',
         fontFamily: "'Space Mono', monospace",
@@ -140,11 +143,10 @@ export function StarTag({ fieldRef, handle, color, show }) {
         whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ width: 4, height: 4, borderRadius: '50%', background: col, boxShadow: `0 0 7px 1px ${rgba(col, 0.8)}`, flexShrink: 0 }} />
       <span style={{ color: rgba(col, 0.95) }}>@</span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 130 }}>{handle}</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>{h}</span>
     </div>
-  )
+  ))
 }
 
 // The @ → star morph. The typed handle dissolves and a glowing star ignites in
