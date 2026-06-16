@@ -1,12 +1,30 @@
 # STILL. — does your ex still think about you?
 
-A one-screen viral web app. You enter your Instagram @ and your ex's @. You only
-ever find out it's mutual if **they** independently enter **you** back — so it's
-anonymous, zero-rejection, and a little addictive. One-sided entries are never
-revealed to anyone.
+A viral web app ("galaxy edition"). You enter your Instagram @ and your ex's @.
+You only ever find out it's mutual if **they** independently enter **you** back —
+so it's anonymous, zero-rejection, and a little addictive. One-sided entries are
+never revealed to anyone.
 
 Live at **https://dolbomi.app/** (the previous DOLBOMI app is archived at
-[`/dolbomi`](https://dolbomi.app/dolbomi)).
+[`/dolbomi`](https://dolbomi.app/dolbomi)). The UI is fully responsive: full-bleed
+on a phone, and the same intimate column centered over the starfield on the web.
+
+## Flow
+
+A short guided flow over an animated starfield (`src/galaxy.js`), built from the
+galaxy-edition design and the recommendations in [`PRODUCT-ANALYSIS.md`](./PRODUCT-ANALYSIS.md):
+
+| Screen | What it does |
+| --- | --- |
+| **Landing** | The hook + "Find out". |
+| **You** | Captures your email **first and emphasized**, then your handle — so a match that lands after you leave can always reach you (memo §2.3 / §4.3). |
+| **Them** | The one person you can't stop thinking about. "Seal it" records the entry. |
+| **Send-off** | The galaxy payoff while the lookup runs (min ~3.2s suspense). |
+| **Resting** | The pending forward-loop: "we're listening", share to make it reach them (memo §2.4). |
+| **Match** | The mutual reveal, with both handles and a way to open the conversation. |
+| **Pricing** | One free ping, $2.99 per extra person — but **the reveal is always free** (memo §4.6). |
+
+State persists in `localStorage`, so a refresh resumes where you left off.
 
 ## Stack
 
@@ -40,7 +58,7 @@ npm run dev                  # demo mode if no env (enter @demo to see a match)
 ```
 
 Without env vars the app runs in **demo mode**: enter `demo` as the ex's @ to see
-the mutual reveal; anything else shows the pending state.
+the mutual reveal; anything else shows the resting/pending state.
 
 ## Build
 
