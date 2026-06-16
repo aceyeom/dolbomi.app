@@ -23,6 +23,8 @@ export function rgba(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
 }
 
+const clampN = (v, a, b) => (v < a ? a : v > b ? b : v)
+
 // warm gradient backdrop for the calm entry screens (no canvas)
 export function WarmBg({ C, variant = 'center', children }) {
   const g = {
@@ -41,16 +43,20 @@ export function WarmBg({ C, variant = 'center', children }) {
   )
 }
 
-// React wrapper around the canvas GalaxyField
-export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals = 0, style }) {
+// React wrapper around the canvas GalaxyField. `onReady` hands the live field
+// instance up so overlays (e.g. the star tag) can read the star's screen
+// position each frame; `origin` is the normalized point the send-off drift
+// starts from — where the @ morphed into a star.
+export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals = 0, origin, onReady, style }) {
   const ref = React.useRef(null)
   const field = React.useRef(null)
   React.useEffect(() => {
     const f = new GalaxyField(ref.current, { you, them, motion })
     field.current = f
     f.setSeals(seals)
-    f.setMode(mode, { dim })
+    f.setMode(mode, { dim, origin })
     f.start()
+    if (onReady) onReady(f)
     let ro
     if (window.ResizeObserver && ref.current && ref.current.parentElement) {
       ro = new ResizeObserver(() => f.resize())
@@ -68,8 +74,8 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals
     if (field.current) field.current.setSeals(seals)
   }, [seals])
   React.useEffect(() => {
-    if (field.current) field.current.setMode(mode, { dim })
-  }, [mode, dim])
+    if (field.current) field.current.setMode(mode, { dim, origin })
+  }, [mode, dim, origin])
   React.useEffect(() => {
     if (field.current) field.current.setMotion(motion)
   }, [motion])
@@ -77,6 +83,96 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals
     if (field.current) field.current.setPalette(you, them)
   }, [you, them])
   return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', ...style }} />
+}
+
+// A subtle handle tag that trails the star we're listening for, so it's always
+// identifiable in the field. Reads the galaxy's live `primaryScreen` each frame
+// and positions itself imperatively (no React re-render churn).
+export function StarTag({ fieldRef, handle, color, show }) {
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    let raf
+    const tick = () => {
+      const el = ref.current
+      const f = fieldRef.current
+      if (el && f && f.primaryScreen) {
+        const ps = f.primaryScreen
+        const on = show && ps.vis
+        el.style.opacity = on ? '1' : '0'
+        if (on) {
+          const x = clampN(ps.x + 16, 14, window.innerWidth - 14)
+          const y = clampN(ps.y - 30, 18, window.innerHeight - 18)
+          el.style.transform = `translate(${x}px, ${y}px)`
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [show, fieldRef])
+  const col = color || '#FF8C66'
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 3,
+        pointerEvents: 'none',
+        opacity: 0,
+        transition: 'opacity .6s ease',
+        willChange: 'transform',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '3px 9px 3px 7px',
+        borderRadius: 999,
+        background: 'rgba(10,8,16,0.42)',
+        border: `1px solid ${rgba(col, 0.32)}`,
+        backdropFilter: 'blur(2px)',
+        WebkitBackdropFilter: 'blur(2px)',
+        fontFamily: "'Space Mono', monospace",
+        fontSize: 10.5,
+        letterSpacing: '.3px',
+        color: 'rgba(244,236,227,0.82)',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ width: 4, height: 4, borderRadius: '50%', background: col, boxShadow: `0 0 7px 1px ${rgba(col, 0.8)}`, flexShrink: 0 }} />
+      <span style={{ color: rgba(col, 0.95) }}>@</span>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 130 }}>{handle}</span>
+    </div>
+  )
+}
+
+// The @ → star morph. The typed handle dissolves and a glowing star ignites in
+// its place, lifting toward the field — the galaxy's send-off drift then carries
+// it on from the same point. A full-screen, one-shot overlay owned by App so it
+// survives the screen change underneath it.
+export function Liftoff({ C, handle }) {
+  // All three layers share one grid cell (gridArea 1/1) so they stack centered
+  // on the handle regardless of its width; each layer's own transform animates
+  // on top of that centering.
+  return (
+    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: 8, pointerEvents: 'none', display: 'grid', placeItems: 'center' }}>
+      <div style={{ display: 'grid', placeItems: 'center', transform: 'translateY(-7vh)' }}>
+        <span
+          className="morph-halo"
+          style={{ gridArea: '1 / 1', width: 150, height: 150, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.you, 0.5)}, transparent 62%)` }}
+        />
+        <span
+          className="morph-star"
+          style={{ gridArea: '1 / 1', placeSelf: 'center', width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: `0 0 22px 7px ${rgba(C.you, 0.85)}, 0 0 58px 20px ${rgba(C.you, 0.4)}` }}
+        />
+        <span className="morph-text" style={{ gridArea: '1 / 1', fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 'clamp(20px, 6vw, 26px)', color: C.cream, whiteSpace: 'nowrap' }}>
+          <span style={{ color: C.you }}>@</span>
+          {handle}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 export function Brandmark({ C, size = 14 }) {
