@@ -1,4 +1,4 @@
-// STILL. — the one call the whole product makes.
+// CELESTE — the one call the whole product makes.
 //
 // submitStill records a one-way "I still think about @them" and tells you, and
 // only you, whether it's mutual. All the matching + anonymity logic lives in the

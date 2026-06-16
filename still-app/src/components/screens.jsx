@@ -1,4 +1,4 @@
-// screens.jsx — STILL. (galaxy edition) screens. Responsive: each shell fills the
+// screens.jsx — CELESTE (galaxy edition) screens. Responsive: each shell fills the
 // viewport and centers a max-width column, so the same flow reads full-bleed on a
 // phone and as an intimate centered column on the web.
 import * as React from 'react'

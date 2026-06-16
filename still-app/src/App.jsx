@@ -17,7 +17,7 @@ const SCREENS = {
   match: MatchScreen,
   pricing: PricingScreen,
 }
-const STORE = 'still-galaxy:v1'
+const STORE = 'celeste:v1'
 const SITE = typeof window !== 'undefined' ? window.location.origin : 'https://dolbomi.app'
 
 const OPENERS = [
@@ -78,6 +78,11 @@ export default function App() {
     const minSuspense = new Promise((r) => setTimeout(r, 3200))
     try {
       const [res] = await Promise.all([submitStill({ me, ex: them, email }), minSuspense])
+      if (res?.error === 'rate_limited') {
+        setError('Whoa — slow down. Too many checks in a short time. Try again in a little while.')
+        go('them')
+        return
+      }
       const isMatch = !!res?.matched
       setMatched(isMatch)
       go(isMatch ? 'match' : 'resting')
@@ -99,7 +104,7 @@ export default function App() {
 
   const share = useCallback(async () => {
     const text = OPENERS[Math.floor(Math.random() * OPENERS.length)]
-    const payload = { title: 'STILL.', text, url: SITE }
+    const payload = { title: 'CELESTE', text, url: SITE }
     try {
       if (navigator.share) {
         await navigator.share(payload)
