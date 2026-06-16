@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { submitStill, normHandle, isValidHandle } from './api/still.js'
-import { makeColors, GalaxyCanvas, WarmBg } from './components/ui.jsx'
+import { makeColors, GalaxyCanvas, WarmBg, StarTag, Liftoff } from './components/ui.jsx'
 import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen } from './components/screens.jsx'
 
 // Galaxy-edition config. Palette = [you, them]; motion drives the starfield swirl.
@@ -18,6 +18,12 @@ const SCREENS = {
   pricing: PricingScreen,
 }
 
+// Where the @ becomes a star (normalized screen coords). Both the DOM morph
+// (Liftoff) and the galaxy's send-off drift use this exact point, so the star
+// hands off from one to the other without a seam. Module-constant => stable
+// reference, so it doesn't re-fire the galaxy's setMode effect every render.
+const SENDOFF_ORIGIN = { x: 0.5, y: 0.43 }
+
 // One persistent background lives at the App level so it never remounts between
 // screens — the galaxy keeps spinning and your stars stay put. Each screen just
 // declares which backdrop it wants and we cross-fade the warm overlay on top of
@@ -26,7 +32,7 @@ const BG = {
   landing: { warm: false, mode: 'idle', dim: 0.62 },
   you: { warm: true, variant: 'quiet', mode: 'idle' },
   them: { warm: true, variant: 'low', mode: 'idle' },
-  sendoff: { warm: false, mode: 'sendoff' },
+  sendoff: { warm: false, mode: 'sendoff', origin: SENDOFF_ORIGIN },
   resting: { warm: false, mode: 'resting' },
   match: { warm: false, mode: 'match' },
   pricing: { warm: true, variant: 'quiet', mode: 'idle' },
@@ -57,6 +63,10 @@ export default function App() {
   // How many people you've sent off — drives the count of resting stars.
   const [sealCount, setSealCount] = useState(init.sealCount || 0)
   const [error, setError] = useState('')
+  // The @ → star morph overlay ({ handle }) and the live galaxy instance the
+  // star-tag follows.
+  const [morph, setMorph] = useState(null)
+  const galaxyRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -85,6 +95,10 @@ export default function App() {
     }
     setSealedAt(Date.now())
     setSealCount((n) => n + 1) // a new star to fly out and join the field
+    // The typed @ ignites into a star (DOM morph) and the galaxy's drift picks it
+    // up from the same point — one continuous gesture into the field.
+    setMorph({ handle: normHandle(them) })
+    setTimeout(() => setMorph(null), 1250)
     go('sendoff')
     const minSuspense = new Promise((r) => setTimeout(r, 3200))
     try {
@@ -142,12 +156,16 @@ export default function App() {
       <GalaxyCanvas
         mode={bg.mode}
         dim={bg.dim}
+        origin={bg.origin}
         seals={sealCount}
         you={C.you}
         them={C.them}
         motion={MOTION}
+        onReady={(f) => (galaxyRef.current = f)}
         style={{ position: 'fixed', zIndex: 0 }}
       />
+      {/* subtle tag that follows your listening star around the field */}
+      <StarTag fieldRef={galaxyRef} handle={them || 'them'} color={C.them} show={screen === 'sendoff' || screen === 'resting'} />
       {/* warm gradient overlay — cross-fades in on the calm entry screens */}
       <div
         aria-hidden
@@ -166,6 +184,9 @@ export default function App() {
       <div key={screen} className="fade" data-screen={screen} style={{ position: 'relative', zIndex: 4 }}>
         <Screen C={C} t={screenT} ctx={ctx} />
       </div>
+
+      {/* @ → star morph, on top of everything during the hand-off */}
+      {morph && <Liftoff C={C} handle={morph.handle} />}
     </div>
   )
 }

@@ -222,6 +222,10 @@ export function RestingScreen({ C, t, ctx }) {
         <GhostButton C={C} onClick={() => ctx.checkAnother()}>
           check someone else →
         </GhostButton>
+        {/* Pricing lives at the moment it matters — the next person is the paid one. */}
+        <GhostButton C={C} onClick={() => ctx.go('pricing')} style={{ padding: 0, fontSize: 11.5, color: C.muted, letterSpacing: '.2px' }}>
+          your first is free · more from $2.99 →
+        </GhostButton>
         {/* DEMO ONLY — preview the mutual reveal. Remove before launch. */}
         <button
           onClick={() => ctx.previewMatch()}
