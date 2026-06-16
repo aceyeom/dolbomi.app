@@ -82,9 +82,9 @@ export class GalaxyField {
     // where the @ became a star (normalized 0..1 screen coords) — the send-off
     // drift starts here so it continues straight out of the DOM morph.
     this.origin = null
-    // live screen position of the star we're "listening" for, so a subtle DOM
-    // tag can follow it. { x, y, vis }
-    this.primaryScreen = { x: 0, y: 0, vis: false }
+    // live screen positions of every resting star, so a subtle DOM tag can
+    // follow each one. [{ x, y, vis }, …], aligned with `sealed` by index.
+    this.sealedScreen = []
     // Each sealed person becomes a persistent star resting in the disk; the set
     // stacks across the session so "more people → more stars".
     this.sealed = []
@@ -507,10 +507,10 @@ export class GalaxyField {
     }
     // sendoff drifts the newest star into place; every other mode just rests the
     // whole stacked set so it survives the screen change without a cut.
+    this.sealedScreen.length = this.sealed.length // drop tags for trimmed stars
     const flying = this.mode === 'sendoff'
     this._drawSealed(rot, flying)
     if (flying) this._drawFlyIn(rot)
-    else if (this.sealed.length === 0) this.primaryScreen = { x: 0, y: 0, vis: false }
   }
 
   // Position of a sealed star in 3D disk space. _project applies the galaxy
@@ -522,14 +522,18 @@ export class GalaxyField {
   _drawSealed(rot, excludeLast) {
     const n = this.sealed.length
     for (let i = 0; i < n; i++) {
+      // the flying star's screen position is owned by _drawFlyIn this frame
       if (excludeLast && i === n - 1) continue
       const pr = this._sealedAt(this.sealed[i], rot)
-      if (!pr) continue
+      if (!pr) {
+        this.sealedScreen[i] = { x: 0, y: 0, vis: false }
+        continue
+      }
       const pulse = 0.78 + 0.22 * Math.sin(this.t * 1.3 + this.sealed[i].phase)
       const sh = clamp(pr.shade, 0.45, 1.2)
       this._star(pr.sx, pr.sy, 'you', Math.max(1.1, 1.9 * pr.persp), 12 * pr.persp * pulse, 0.5 * pulse * sh)
-      // the newest resting star is the one we're listening for — let a tag follow it
-      if (i === n - 1) this.primaryScreen = { x: pr.sx, y: pr.sy, vis: true }
+      // each resting star carries its own tag — record where it is on screen
+      this.sealedScreen[i] = { x: pr.sx, y: pr.sy, vis: true }
     }
   }
 
@@ -560,7 +564,7 @@ export class GalaxyField {
       ctx.drawImage(this.glows.you, ox - hr, oy - hr, hr * 2, hr * 2)
       ctx.globalAlpha = 1
       this._star(ox, oy, 'you', 1.2 + 0.9 * f, 8 + 7 * f, 0.18 + 0.34 * f)
-      this.primaryScreen = { x: ox, y: oy, vis: true }
+      this.sealedScreen[this.sealed.length - 1] = { x: ox, y: oy, vis: true }
       this.trail = []
       return
     }
@@ -587,7 +591,7 @@ export class GalaxyField {
     }
     ctx.globalAlpha = 1
 
-    this.primaryScreen = { x, y, vis: true }
+    this.sealedScreen[this.sealed.length - 1] = { x, y, vis: true }
     // size eases down to the resting size; a slow breath instead of a shine
     const breathe = 0.48 + 0.06 * Math.sin(this.t * 2)
     this._star(x, y, 'you', 1.9 + (1 - e) * 0.5, 14 - e * 2, breathe)
@@ -604,7 +608,6 @@ export class GalaxyField {
     // the calm binary reads clearly instead of forming behind the text.
     const cx = this.cx
     const cy = this.h * 0.6
-    this.primaryScreen = { x: cx, y: cy, vis: false }
 
     const APPROACH = 2.4
     const e = easeInOut(Math.min(1, t / APPROACH))
