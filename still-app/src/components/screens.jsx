@@ -4,6 +4,7 @@
 // persistent galaxy + the warm overlay) are owned by App so they never remount
 // between screens — these shells only lay out the foreground content.
 import * as React from 'react'
+import { normHandle } from '../api/still.js'
 import { Brandmark, Sonar, PrimaryButton, GhostButton, Field, HandleChip, StepDots, BackBtn, Icon, rgba } from './ui.jsx'
 
 // Shared centered column: at least one dynamic-viewport tall (so the flex
@@ -34,6 +35,11 @@ const WarmShell = ({ children }) => <ShellInner>{children}</ShellInner>
 
 // ── 1 · LANDING ──────────────────────────────────────────────
 export function LandingScreen({ C, t, ctx }) {
+  // One-tap 18+ affirmation (§3 minors): continuing confirms adulthood + terms.
+  const start = () => {
+    if (!ctx.over18) ctx.affirmAge()
+    ctx.go('you')
+  }
   return (
     <GalaxyShell C={C} t={t} mode="idle" dim={0.62}>
       <div className="enter" style={{ display: 'flex', justifyContent: 'center' }}>
@@ -54,7 +60,7 @@ export function LandingScreen({ C, t, ctx }) {
       </div>
 
       <div className="enter" style={{ animationDelay: '.2s', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <PrimaryButton C={C} onClick={() => ctx.go('you')}>
+        <PrimaryButton C={C} onClick={start}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, justifyContent: 'center', whiteSpace: 'nowrap' }}>
             Find out <Icon name="arrow" size={17} color="#1a0f0a" stroke={2.1} />
           </span>
@@ -68,6 +74,17 @@ export function LandingScreen({ C, t, ctx }) {
             why it’s free →
           </GhostButton>
         </div>
+        {/* Age affirmation + legal — a one-line gate, no extra screen. */}
+        <p style={{ margin: 0, textAlign: 'center', fontSize: 11, lineHeight: 1.5, color: C.muted }}>
+          For adults only. By continuing you confirm you’re 18 or older and agree to our{' '}
+          <button
+            onClick={() => ctx.go('privacy')}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: C.you, fontSize: 11, textDecoration: 'underline' }}
+          >
+            privacy &amp; terms
+          </button>
+          .
+        </p>
       </div>
     </GalaxyShell>
   )
@@ -115,8 +132,9 @@ export function YouScreen({ C, t, ctx }) {
           <HandleFieldTagged C={C} value={ctx.me} onChange={ctx.setMe} onEnter={() => valid && ctx.go('them')} />
         </div>
 
-        <div className="enter" style={{ animationDelay: '.14s', display: 'flex', alignItems: 'center', gap: 7, color: C.muted, fontSize: 12, padding: '0 2px' }}>
-          <Icon name="lock" size={13} color={C.muted} /> Your handle is shown only if it’s mutual.
+        <div className="enter" style={{ animationDelay: '.14s', display: 'flex', alignItems: 'flex-start', gap: 7, color: C.muted, fontSize: 12, padding: '0 2px' }}>
+          <Icon name="mail" size={14} color={C.muted} />
+          <span>There’s no result on screen — if it’s mutual, the only way we can tell you is this email. Your handle is shown only if it’s mutual.</span>
         </div>
       </div>
 
@@ -145,6 +163,23 @@ function HandleFieldTagged({ C, value, onChange, onEnter }) {
 // ── 3 · THEM ─────────────────────────────────────────────────
 export function ThemScreen({ C, t, ctx }) {
   const valid = ctx.them.trim().length >= 2 && ctx.them.trim() !== ctx.me.trim()
+  // Confirmation echo (§4.5): show the normalised @ back before sealing so a
+  // one-character typo doesn't become a permanent dead entry.
+  const [confirming, setConfirming] = React.useState(false)
+  const normd = normHandle(ctx.them)
+  const onSeal = () => {
+    if (!valid) return
+    if (!confirming) {
+      setConfirming(true)
+      return
+    }
+    ctx.seal()
+  }
+  // Drop the confirm step if they go back to editing the handle.
+  React.useEffect(() => {
+    setConfirming(false)
+  }, [ctx.them])
+
   return (
     <WarmShell C={C} variant="low">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -159,17 +194,24 @@ export function ThemScreen({ C, t, ctx }) {
           <em style={{ color: C.them }}>stop thinking about?</em>
         </h2>
         <div className="enter" style={{ animationDelay: '.08s' }}>
-          <Field C={C} kind="handle" value={ctx.them} onChange={ctx.setThem} placeholder="their.handle" accent={C.them} autoFocus emphasis onEnter={() => valid && ctx.seal()} />
+          <Field C={C} kind="handle" value={ctx.them} onChange={ctx.setThem} placeholder="their.handle" accent={C.them} autoFocus emphasis onEnter={onSeal} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 14, color: C.muted, fontSize: 12 }}>
             <Icon name="eye" size={13} color={C.muted} /> No alert. No trace. Invisible unless they enter you back.
           </div>
+          {confirming && valid && (
+            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: C.ink2, border: `1px solid ${rgba(C.them, 0.3)}` }}>
+              <span style={{ color: C.muted, fontSize: 13 }}>We’ll look for </span>
+              <HandleChip C={C} handle={normd} color={C.them} />
+              <span style={{ color: C.muted, fontSize: 13 }}> — spelled right? Tap “Seal it” again to confirm.</span>
+            </div>
+          )}
           {ctx.error && <div style={{ marginTop: 12, color: C.them, fontSize: 13 }}>{ctx.error}</div>}
         </div>
       </div>
 
-      <PrimaryButton C={C} disabled={!valid} onClick={() => ctx.seal()}>
+      <PrimaryButton C={C} disabled={!valid} onClick={onSeal}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, justifyContent: 'center' }}>
-          <Icon name="lock" size={16} color="#1a0f0a" stroke={2} /> Seal it
+          <Icon name="lock" size={16} color="#1a0f0a" stroke={2} /> {confirming ? 'Yes — seal it' : 'Seal it'}
         </span>
       </PrimaryButton>
     </WarmShell>
@@ -213,8 +255,9 @@ export function RestingScreen({ C, t, ctx }) {
         <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(30px, 7vw, 38px)', lineHeight: 1.14, color: C.cream }}>
           It’s out there now.
         </h2>
-        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14, lineHeight: 1.55, color: C.muted, maxWidth: 300 }}>
-          Your star is in the sky. We’ll tell you the moment <HandleChip C={C} handle={ctx.them || 'them'} color={C.them} /> looks back.
+        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14, lineHeight: 1.55, color: C.muted, maxWidth: 320 }}>
+          Your star is in the sky. There’s no result here on purpose — if{' '}
+          <HandleChip C={C} handle={ctx.them || 'them'} color={C.them} /> enters you back, we’ll email you privately. That email is the only reveal.
         </p>
       </div>
 
@@ -222,36 +265,28 @@ export function RestingScreen({ C, t, ctx }) {
         <GhostButton C={C} onClick={() => ctx.checkAnother()}>
           check someone else →
         </GhostButton>
-        {/* Pricing lives at the moment it matters — the next person is the paid one. */}
+        {/* Honest copy: monetization isn't built yet — it's free while we're early. */}
         <GhostButton C={C} onClick={() => ctx.go('pricing')} style={{ padding: 0, fontSize: 11.5, color: C.muted, letterSpacing: '.2px' }}>
-          your first is free · more from $2.99 →
+          free while we’re early →
         </GhostButton>
-        {/* DEMO ONLY — preview the mutual reveal. Remove before launch. */}
-        <button
-          onClick={() => ctx.previewMatch()}
-          style={{
-            background: 'none',
-            border: `1px dashed ${rgba(C.them, 0.4)}`,
-            borderRadius: 999,
-            cursor: 'pointer',
-            padding: '7px 14px',
-            color: C.muted,
-            fontFamily: "'Space Mono', monospace",
-            fontSize: 11,
-            letterSpacing: '.5px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-          }}
-        >
-          <Icon name="eye" size={13} color={C.them} /> demo · see a match
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {ctx.canWithdraw && (
+            <GhostButton C={C} onClick={() => ctx.withdrawLast()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
+              withdraw last entry
+            </GhostButton>
+          )}
+          <GhostButton C={C} onClick={() => ctx.forget()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
+            forget on this device
+          </GhostButton>
+        </div>
       </div>
     </GalaxyShell>
   )
 }
 
 // ── 6 · MATCH (galaxy dims, two linked stars) ────────────────
+// Not reached from the live flow anymore (deferred reveal, §2.3). Kept as the
+// home for a future verified reveal link (e.g. opened from the match email).
 export function MatchScreen({ C, t, ctx }) {
   return (
     <GalaxyShell C={C} t={t} mode="match">
@@ -276,6 +311,9 @@ export function MatchScreen({ C, t, ctx }) {
             Open the conversation <Icon name="arrow" size={17} color="#1a0f0a" stroke={2.1} />
           </span>
         </PrimaryButton>
+        <p style={{ margin: '2px 0 0', textAlign: 'center', fontSize: 12, lineHeight: 1.5, color: C.muted }}>
+          No pressure — there’s no wrong move here. Reach out only if you want to.
+        </p>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <GhostButton C={C} onClick={() => ctx.go('resting')}>
             not yet
@@ -316,18 +354,104 @@ export function PricingScreen({ C, t, ctx }) {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22 }}>
         <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(28px, 7vw, 36px)', lineHeight: 1.16, color: C.cream }}>
-          We charge for the <em style={{ color: C.you }}>curiosity</em> — never the feelings.
+          Free while we’re <em style={{ color: C.you }}>small</em>.
         </h2>
 
         <div className="enter" style={{ animationDelay: '.08s' }}>
-          <Line label="Your first ping" note="One person, on us." value="Free" accent={C.you} />
-          <Line label="Each extra person" note="The next one you can’t shake." value="$2.99" />
-          <Line label="The reveal" note="The answer is never paywalled." value="Free" accent={C.you} last />
+          <Line label="Everything, right now" note="Enter as many as you like — on us, while we’re early." value="Free" accent={C.you} />
+          <Line label="The reveal" note="The answer will never be paywalled." value="Free" accent={C.you} last />
         </div>
+
+        <p className="enter" style={{ animationDelay: '.12s', margin: 0, fontSize: 12.5, lineHeight: 1.55, color: C.muted }}>
+          We may add paid extras later (more breadth, faster notifications). We’ll be upfront before anything costs money — and finding out it’s mutual stays free.
+        </p>
       </div>
 
       <div className="enter" style={{ animationDelay: '.16s' }}>
-        <PrimaryButton C={C} onClick={() => (ctx.sealedAt ? ctx.checkAnother() : ctx.go('you'))}>{ctx.sealedAt ? 'Check another person' : 'Start with my free one'}</PrimaryButton>
+        <PrimaryButton C={C} onClick={() => (ctx.sealedAt ? ctx.checkAnother() : ctx.go('you'))}>{ctx.sealedAt ? 'Check another person' : 'Start with mine'}</PrimaryButton>
+      </div>
+    </WarmShell>
+  )
+}
+
+// ── 8 · PRIVACY & TERMS (with self-service erasure) ──────────
+export function PrivacyScreen({ C, t, ctx }) {
+  const [handle, setHandle] = React.useState('')
+  const [status, setStatus] = React.useState(null) // null | 'working' | 'done' | 'error'
+  const ok = handle.trim().length >= 2
+  const submit = async () => {
+    if (!ok || status === 'working') return
+    setStatus('working')
+    try {
+      await ctx.suppressHandle(handle)
+      setStatus('done')
+    } catch (e) {
+      console.error(e)
+      setStatus('error')
+    }
+  }
+  const H = ({ children }) => (
+    <h3 style={{ margin: '20px 0 6px', fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: C.cream }}>{children}</h3>
+  )
+  const P = ({ children }) => <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: C.muted }}>{children}</p>
+
+  return (
+    <WarmShell C={C} variant="quiet">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <BackBtn C={C} onClick={() => ctx.go(ctx.sealedAt ? 'resting' : 'landing')} />
+        <Brandmark C={C} size={12} />
+        <div style={{ width: 38 }} />
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 8 }}>
+        <h2 style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(26px, 7vw, 34px)', lineHeight: 1.16, color: C.cream }}>
+          Privacy &amp; terms
+        </h2>
+
+        <H>What we store</H>
+        <P>
+          When you enter an @, we store the two handles (yours and theirs) and, if you give one, your email — only so we can email you if it turns out to be mutual. We never post, message anyone, or alert the person you entered.
+        </P>
+
+        <H>What you ever see</H>
+        <P>
+          One-sided entries are never revealed to anyone. There is no result shown on screen. If — and only if — the other person independently enters you back, we email the earlier entrant. Nothing else is disclosed, ever.
+        </P>
+
+        <H>For adults</H>
+        <P>CELESTE is intended for people 18 and older.</P>
+
+        <H>Your rights</H>
+        <P>
+          You can withdraw an entry you made, and you can ask us to delete and block any handle — including yours, if someone entered you without your consent. Use the box below, or email{' '}
+          <a href="mailto:privacy@dolbomi.app" style={{ color: C.you }}>privacy@dolbomi.app</a>.
+        </P>
+
+        <H>Remove &amp; block a handle</H>
+        <P>This deletes every entry referencing the handle and blocks it from ever being entered again.</P>
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Field C={C} kind="handle" value={handle} onChange={setHandle} placeholder="handle.to.remove" accent={C.them} />
+          <PrimaryButton C={C} disabled={!ok || status === 'working'} onClick={submit}>
+            {status === 'working' ? 'Removing…' : 'Remove & block this handle'}
+          </PrimaryButton>
+          {status === 'done' && (
+            <P>
+              Done. <HandleChip C={C} handle={normHandle(handle)} color={C.them} /> has been removed and blocked.
+            </P>
+          )}
+          {status === 'error' && <div style={{ fontSize: 13, color: C.them }}>Something went wrong — please email us instead.</div>}
+        </div>
+
+        <H>This device</H>
+        <div style={{ marginTop: 6 }}>
+          <GhostButton C={C} onClick={() => ctx.forget()} style={{ padding: 0, fontSize: 13, color: C.you }}>
+            Forget everything on this device →
+          </GhostButton>
+        </div>
+
+        <p style={{ margin: '22px 0 0', fontSize: 11, lineHeight: 1.55, color: C.muted }}>
+          We’re a small early-stage product and will keep this page current as it grows. Questions: <a href="mailto:privacy@dolbomi.app" style={{ color: C.muted }}>privacy@dolbomi.app</a>.
+        </p>
       </div>
     </WarmShell>
   )

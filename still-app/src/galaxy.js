@@ -62,6 +62,9 @@ export class GalaxyField {
     this.them = opts.them || '#FF5E8A'
     this.motion = opts.motion != null ? opts.motion : 20
     this.dpr = Math.min(window.devicePixelRatio || 1, 2)
+    // Honor prefers-reduced-motion (§5.3): keep the starfield as a calm, near-
+    // static window into space instead of a continuously swirling animation.
+    this.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
     this.spin = 0
     this.t = 0
     this.mode = 'idle'
@@ -236,9 +239,19 @@ export class GalaxyField {
       this.pTarget.x = clamp((e.gamma || 0) / 35, -1, 1)
       this.pTarget.y = clamp(((e.beta || 0) - 45) / 35, -1, 1)
     }
+    // Pause the canvas when the tab is hidden (§5.3) — no battery/GPU spend on a
+    // backgrounded tab. Resumes cleanly on return (start() reseeds lastTs).
+    this._onVis = () => {
+      if (document.hidden) this.stop()
+      else this.start()
+    }
     window.addEventListener('resize', this._onResize)
-    window.addEventListener('pointermove', this._onPointer, { passive: true })
-    window.addEventListener('deviceorientation', this._onTilt, { passive: true })
+    document.addEventListener('visibilitychange', this._onVis)
+    // Reduced-motion: skip pointer/tilt parallax entirely (it's continuous motion).
+    if (!this.reduced) {
+      window.addEventListener('pointermove', this._onPointer, { passive: true })
+      window.addEventListener('deviceorientation', this._onTilt, { passive: true })
+    }
   }
 
   resize() {
@@ -286,6 +299,7 @@ export class GalaxyField {
   destroy() {
     this.stop()
     window.removeEventListener('resize', this._onResize)
+    document.removeEventListener('visibilitychange', this._onVis)
     window.removeEventListener('pointermove', this._onPointer)
     window.removeEventListener('deviceorientation', this._onTilt)
   }
@@ -361,13 +375,20 @@ export class GalaxyField {
     if (!this.running) return
     const dt = Math.min(0.05, (ts - this.lastTs) / 1000)
     this.lastTs = ts
-    this.t += dt
     this.modeT += dt
-    this.spin += dt * (this.motion / 100) * 0.16
     this.dim += (this.dimTarget - this.dim) * Math.min(1, dt * 2.2)
-    this.p.x = lerp(this.p.x, this.pTarget.x, Math.min(1, dt * 2.6))
-    this.p.y = lerp(this.p.y, this.pTarget.y, Math.min(1, dt * 2.6))
-    this._draw(dt)
+    if (this.reduced) {
+      // Reduced-motion: no spin, no parallax, no twinkle advance (_draw(0)). The
+      // dim cross-fade and one-shot send-off settle still resolve, then it holds
+      // still — a calm window into space rather than a constant animation.
+      this._draw(0)
+    } else {
+      this.t += dt
+      this.spin += dt * (this.motion / 100) * 0.16
+      this.p.x = lerp(this.p.x, this.pTarget.x, Math.min(1, dt * 2.6))
+      this.p.y = lerp(this.p.y, this.pTarget.y, Math.min(1, dt * 2.6))
+      this._draw(dt)
+    }
     requestAnimationFrame(this._tick.bind(this))
   }
 

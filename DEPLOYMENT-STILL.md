@@ -26,26 +26,33 @@ This creates `still_entries`, `still_matches`, `still_notifications`, the
 `still_submit` RPC, and `still_norm`. It is idempotent and touches no existing
 table. (No seed needed.)
 
-Then run the safety hardening (rate limiting + anti-exfiltration on the match
-email — also idempotent, `CREATE OR REPLACE`s `still_submit`):
+Then run the safety hardening (rate limiting + anti-exfiltration), and the
+deferred-reveal + erasure + email dead-letter migration — both idempotent and
+`CREATE OR REPLACE` `still_submit`:
 
 ```
 supabase/migrations/0007_still_safety.sql
+supabase/migrations/0008_still_deferred_reveal.sql
 ```
 
-Sanity check it works:
+Sanity check it works (note: after 0008 the RPC NEVER reveals a match — it
+returns only `{"recorded": true}`; the mutual "yes" is delivered solely by the
+email queued to the earlier entrant):
 
 ```sql
-select still_submit('@me','@you','early@email.com');  -- {"matched": false}  (earlier entrant, leaves the app)
-select still_submit('@you','@me','live@email.com');   -- {"matched": true, "them": "@me"}  (live submitter)
-select * from still_matches;                            -- one row
--- after 0007: ONE notification, to the EARLIER entrant (me / early@email.com).
+select still_submit('@me','@you','early@email.com');  -- {"recorded": true}  (earlier entrant, leaves the app)
+select still_submit('@you','@me','live@email.com');   -- {"recorded": true}  (live submitter — no reveal on screen)
+select * from still_matches;                            -- one row (mutual, recorded server-side)
+-- ONE notification, to the EARLIER entrant (me / early@email.com).
 -- the address typed on the triggering call (live@email.com) is never queued.
 select self_handle, to_email from still_notifications;  -- me | early@email.com
+-- erasure: block + wipe a handle (third-party opt-out / privacy screen):
+select still_suppress('@you');                          -- {"suppressed":"you","erased":N}
 -- clean up the test rows when done:
 delete from still_entries where from_handle in ('me','you');
 delete from still_matches where handle_a in ('me','you') or handle_b in ('me','you');
 delete from still_attempts where from_handle in ('me','you');
+delete from still_suppressions where handle in ('me','you');
 ```
 
 ## 2. Supabase — match-notification emails (Resend)
@@ -54,7 +61,8 @@ delete from still_attempts where from_handle in ('me','you');
    (or use `onboarding@resend.dev` for testing). Copy your **API key**.
 2. Set the function secrets — Supabase → **Edge Functions → Secrets**:
    - `RESEND_API_KEY` = your key
-   - `STILL_FROM_EMAIL` = `STILL. <hello@dolbomi.app>` (a verified sender)
+   - `STILL_FROM_EMAIL` = `CELESTE <hello@dolbomi.app>` (a verified sender — the
+     brand users see is **CELESTE**; the `STILL_*` var name is internal only)
    - `STILL_SITE_URL` = `https://dolbomi.app`
    (`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.)
 3. Deploy the function:
