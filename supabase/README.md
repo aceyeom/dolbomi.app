@@ -17,7 +17,9 @@ of the DOLBOMI tables, so it is safe to run on the live database.
 | 3 | `migrations/0003_onboarding_user_opps.sql` | onboarding profile fields (병과·관심사·role), interest tags, user-created opportunities + admin review RPCs |
 | 4 | `migrations/0004_design_revamp.sql`, `0005_design_revamp_v2.sql` | DOLBOMI design-revamp schema tweaks |
 | 5 | `seed.sql` | DOLBOMI reference content (catalog/benefits/titles/quest pool) — **generated** |
-| 6 | `migrations/0006_still.sql` | **STILL.** — `still_*` tables, `still_submit` RPC, RLS (additive) |
+| 6 | `migrations/0006_still.sql` | **CELESTE** (internal `still_*`) — tables, `still_submit` RPC, RLS (additive) |
+| 7 | `migrations/0007_still_safety.sql` | CELESTE — rate limiting + anti-exfiltration on the match email |
+| 8 | `migrations/0008_still_deferred_reveal.sql` | CELESTE — deferred reveal, per-`to` rate cap, withdraw/suppress erasure, email dead-letter |
 
 All are idempotent (`if not exists` / `create or replace` / `truncate`),
 so re-running is safe. **Note:** `seed.sql` now writes the `tags` columns, so

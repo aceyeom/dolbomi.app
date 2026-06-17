@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { submitStill, normHandle, isValidHandle } from './api/still.js'
+import { submitStill, withdrawStill, suppressHandle, normHandle, isValidHandle } from './api/still.js'
 import { makeColors, GalaxyCanvas, WarmBg, StarTags, Liftoff } from './components/ui.jsx'
-import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen } from './components/screens.jsx'
+import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen, PrivacyScreen } from './components/screens.jsx'
 
 // Galaxy-edition config. Palette = [you, them]; motion drives the starfield swirl.
 const PALETTE = ['#FF8C66', '#FF5E8A']
@@ -14,8 +14,12 @@ const SCREENS = {
   them: ThemScreen,
   sendoff: SendoffScreen,
   resting: RestingScreen,
+  // `match` is no longer reached from the live flow (deferred reveal, §2.3):
+  // the mutual "yes" lands by email. Kept as the home for a future verified
+  // reveal link, never routed to synchronously.
   match: MatchScreen,
   pricing: PricingScreen,
+  privacy: PrivacyScreen,
 }
 
 // Where the @ becomes a star (normalized screen coords). Both the DOM morph
@@ -36,6 +40,7 @@ const BG = {
   resting: { warm: false, mode: 'resting' },
   match: { warm: false, mode: 'match' },
   pricing: { warm: true, variant: 'quiet', mode: 'idle' },
+  privacy: { warm: true, variant: 'quiet', mode: 'idle' },
 }
 
 const STORE = 'celeste:v1'
@@ -51,25 +56,24 @@ export default function App() {
     }
   }, [])
 
-  // Never resume mid-animation: a stored 'sendoff' resolves to its outcome.
-  const initialScreen = init.screen === 'sendoff' ? (init.matched ? 'match' : 'resting') : init.screen || 'landing'
+  // Never resume mid-animation: a stored 'sendoff' resolves to resting (there is
+  // no synchronous match outcome to resolve to anymore — §2.3).
+  const initialScreen = init.screen === 'sendoff' ? 'resting' : init.screen || 'landing'
 
   const [screen, setScreen] = useState(initialScreen)
   const [email, setEmail] = useState(init.email || '')
   const [me, setMe] = useState(init.me || '')
-  const [them, setThem] = useState(init.them || '')
+  // `them` and `handles` are SECRETS (who you pined for). Per §4.3 they are NOT
+  // persisted to localStorage — they live in memory only, so a shared device or
+  // a curious second user can't read them back from the browser store.
+  const [them, setThem] = useState('')
   const [sealedAt, setSealedAt] = useState(init.sealedAt || null)
-  const [matched, setMatched] = useState(init.matched || false)
+  // One-time 18+ affirmation (§3, minors). Persisted so we only ask once.
+  const [over18, setOver18] = useState(!!init.over18)
   // How many people you've sent off — drives the count of resting stars.
   const [sealCount, setSealCount] = useState(init.sealCount || 0)
-  // The @ behind each resting star, aligned with the stars by index, so every
-  // one floating in the field carries its own tag. Kept length === sealCount;
-  // older stars from before tags existed pad with '' (no tag).
-  const [handles, setHandles] = useState(() => {
-    const stored = Array.isArray(init.handles) ? init.handles : []
-    const n = init.sealCount || 0
-    return stored.length >= n ? stored.slice(stored.length - n) : [...Array(n - stored.length).fill(''), ...stored]
-  })
+  // The @ behind each resting star, aligned by index — in memory only (§4.3).
+  const [handles, setHandles] = useState([])
   const [error, setError] = useState('')
   // The @ → star morph overlay ({ handle }) and the live galaxy instance the
   // star-tag follows.
@@ -78,19 +82,21 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, them, sealedAt, matched, sealCount, handles }))
+      // Persist only the minimum needed to resume — never the crush graph (§4.3).
+      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, sealedAt, over18, sealCount }))
     } catch {
       /* private mode / quota — fine to skip */
     }
-  }, [screen, email, me, them, sealedAt, matched, sealCount, handles])
+  }, [screen, email, me, sealedAt, over18, sealCount])
 
   const go = useCallback((s) => {
     setScreen(s)
     requestAnimationFrame(() => window.scrollTo(0, 0))
   }, [])
 
-  // Seal: record the one-way entry and learn (only for us) whether it's mutual.
-  // The galaxy "send-off" plays for at least ~3.2s so the reveal always lands.
+  // Seal: record the one-way entry. Per §2.3 the server never reveals whether
+  // it's mutual — everyone lands on `resting`; a real match arrives by email.
+  // The galaxy "send-off" plays for at least ~3.2s so the moment still breathes.
   const seal = useCallback(async () => {
     setError('')
     if (!isValidHandle(me) || !isValidHandle(them)) {
@@ -119,12 +125,16 @@ export default function App() {
         go('them')
         return
       }
-      const isMatch = !!res?.matched
-      setMatched(isMatch)
-      go(isMatch ? 'match' : 'resting')
+      if (res?.error === 'suppressed') {
+        setError('That person has asked not to be entered on CELESTE. We can’t record this one.')
+        setSealCount((n) => Math.max(0, n - 1))
+        setHandles((h) => h.slice(0, -1))
+        go('them')
+        return
+      }
+      go('resting')
     } catch (e) {
       console.error(e)
-      setMatched(false)
       setSealCount((n) => Math.max(0, n - 1))
       setHandles((h) => h.slice(0, -1))
       setError('Something went wrong. Try again.')
@@ -135,16 +145,45 @@ export default function App() {
   // Multi-entry: keep your handle + email, point the next star at someone new.
   const checkAnother = useCallback(() => {
     setThem('')
-    setMatched(false)
     setError('')
     go('them')
   }, [go])
 
-  // Demo only: preview the mutual reveal without a real match. Remove later.
-  const previewMatch = useCallback(() => {
-    setMatched(true)
-    go('match')
+  // Withdraw the most recent entry from this session (§4.6). Best-effort: also
+  // un-records it server-side so no future reveal can fire for that pair.
+  const withdrawLast = useCallback(async () => {
+    const last = handles[handles.length - 1]
+    if (!last) return
+    setHandles((h) => h.slice(0, -1))
+    setSealCount((n) => Math.max(0, n - 1))
+    try {
+      await withdrawStill({ me, ex: last })
+    } catch (e) {
+      console.error(e)
+    }
+    setThem('')
+    go('you')
+  }, [handles, me, go])
+
+  // "Forget on this device" (§4.3): wipe all local trace and reset to landing.
+  const forget = useCallback(() => {
+    try {
+      localStorage.removeItem(STORE)
+    } catch {
+      /* ignore */
+    }
+    setEmail('')
+    setMe('')
+    setThem('')
+    setSealedAt(null)
+    setSealCount(0)
+    setHandles([])
+    setOver18(false)
+    setError('')
+    go('landing')
   }, [go])
+
+  const affirmAge = useCallback(() => setOver18(true), [])
 
   const openConversation = useCallback(() => {
     const handle = normHandle(them)
@@ -152,7 +191,12 @@ export default function App() {
   }, [them])
 
   const screenT = { motion: MOTION, head: HEAD }
-  const ctx = { email, me, them, sealedAt, matched, error, setEmail, setMe, setThem, go, seal, checkAnother, previewMatch, openConversation }
+  const ctx = {
+    email, me, them, sealedAt, over18, error,
+    setEmail, setMe, setThem, go, seal, checkAnother,
+    withdrawLast, forget, affirmAge, suppressHandle, openConversation,
+    canWithdraw: handles.length > 0,
+  }
   const Screen = SCREENS[screen] || SCREENS.landing
 
   const bg = BG[screen] || BG.landing
