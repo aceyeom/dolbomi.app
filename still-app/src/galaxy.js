@@ -48,6 +48,7 @@ const PAL = {
 }
 
 // camera / projection
+const VANISH_DUR = 0.55 // seconds — the star's wink-out when withdrawn
 const CAM = 2.7 // camera distance from galactic center
 const FOCAL = 2.35 // focal length (bigger = flatter / less perspective)
 const TILT = 1.04 // base disk tilt toward the camera (rad)
@@ -97,6 +98,9 @@ export class GalaxyField {
     this.focusTarget = 0
     this.focusIndex = -1
     this.focusScreen = { x: 0, y: 0, vis: false } // where the focused star sits now
+    // A star being withdrawn plays a brief implosion-then-fade in place before
+    // the React layer drops it from the set: { i, t }.
+    this.vanish = null
     this._bind()
     this.resize()
   }
@@ -324,10 +328,21 @@ export class GalaxyField {
     this.focusTarget = 0
   }
 
+  // Play a quick vanish (implode + fade) on sealed star `i`. The React layer
+  // calls this just before it removes the star from its arrays, so the point of
+  // light is seen to wink out instead of simply disappearing on the next frame.
+  vanishStar(i) {
+    if (i == null || i < 0) return
+    this.vanish = { i, t: 0 }
+  }
+
   // Which sealed star (if any) is under a screen-space point — used to turn a
   // tap into a focus. Only meaningful when not already zoomed (focus ≈ 0), where
   // sealedScreen positions match raw screen coordinates. Returns index or -1.
-  hitTest(clientX, clientY, radius = 26) {
+  // The radius is generous: a resting star is a tiny point and its @handle tag
+  // floats ~30px up-and-right of it, so a forgiving target lets a tap on the
+  // handle (or anywhere near the star) select it instead of missing a 2px dot.
+  hitTest(clientX, clientY, radius = 56) {
     const arr = this.sealedScreen || []
     let best = -1
     let bestD = radius * radius
@@ -422,6 +437,11 @@ export class GalaxyField {
       this.focusIndex = -1
       this.focusScreen.vis = false
     }
+    // advance (and retire) a star's wink-out
+    if (this.vanish) {
+      this.vanish.t += dt
+      if (this.vanish.t >= VANISH_DUR) this.vanish = null
+    }
     if (this.reduced) {
       // Reduced-motion: no spin, no parallax, no twinkle advance (_draw(0)). The
       // dim cross-fade and one-shot send-off settle still resolve, then it holds
@@ -443,6 +463,11 @@ export class GalaxyField {
     const ctx = this.ctx,
       d = this.dim,
       rot = this._rot()
+    // While the camera is zoomed into a star the whole field is scaled up, so
+    // the tiny crisp star/dust quads would magnify into visible squares. Draw
+    // them as round dots when zoomed (kept as fast fillRects otherwise) so a
+    // close-up reads as soft points of light, not pixels.
+    const round = this.focus > 0.01
 
     // deep-space backdrop with a faint cool zenith glow
     ctx.globalCompositeOperation = 'source-over'
@@ -470,7 +495,9 @@ export class GalaxyField {
       const fp = this._sealedAt(this.sealed[this.focusIndex], rot)
       if (fp) {
         const f = this.focus
-        const scale = 1 + f * 1.9
+        // Gentler than before (was 1.9): a calmer drift-in that doesn't blow the
+        // sparse field up so far it reads as empty magnified pixels.
+        const scale = 1 + f * 1.45
         const ctX = lerp(fp.sx, this.cx, f)
         const ctY = lerp(fp.sy, this.cy, f)
         this.focusScreen = { x: ctX, y: ctY, vis: true }
@@ -506,7 +533,13 @@ export class GalaxyField {
       ctx.globalAlpha = Math.min(0.6, a)
       ctx.fillStyle = p.warm ? PAL.warm : PAL.cream
       const s = p.rad * pr.persp
-      ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
+      if (round) {
+        ctx.beginPath()
+        ctx.arc(pr.sx, pr.sy, s, 0, TWO)
+        ctx.fill()
+      } else {
+        ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
+      }
     }
 
     // arm/bulge/halo stars (crisp) + collect glow stars for the additive pass
@@ -521,7 +554,13 @@ export class GalaxyField {
       ctx.globalAlpha = Math.min(0.85, a)
       ctx.fillStyle = st.hue
       const s = Math.max(0.4, st.rad * pr.persp * 0.9)
-      ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
+      if (round) {
+        ctx.beginPath()
+        ctx.arc(pr.sx, pr.sy, s, 0, TWO)
+        ctx.fill()
+      } else {
+        ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
+      }
     }
 
     // glow pass (additive, small + few), each tinted to its star's hue
@@ -620,6 +659,26 @@ export class GalaxyField {
         this.sealedScreen[i] = { x: 0, y: 0, vis: false }
         continue
       }
+      // Withdrawing this star: a soft halo blooms outward while the core
+      // contracts to a point and winks out — then the React layer drops it.
+      if (this.vanish && this.vanish.i === i) {
+        const ctx = this.ctx
+        const vp = clamp(this.vanish.t / VANISH_DUR, 0, 1)
+        const fade = 1 - vp
+        ctx.globalCompositeOperation = 'lighter'
+        const hr = (8 + vp * 30) * pr.persp
+        ctx.globalAlpha = 0.5 * fade
+        ctx.drawImage(this.glows.you, pr.sx - hr, pr.sy - hr, hr * 2, hr * 2)
+        ctx.globalAlpha = fade
+        ctx.fillStyle = '#fff'
+        ctx.beginPath()
+        ctx.arc(pr.sx, pr.sy, Math.max(0.2, 1.9 * (1 - vp) * pr.persp + 0.3), 0, TWO)
+        ctx.fill()
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'source-over'
+        this.sealedScreen[i] = { x: pr.sx, y: pr.sy, vis: false }
+        continue
+      }
       const pulse = 0.78 + 0.22 * Math.sin(this.t * 1.3 + this.sealed[i].phase)
       const sh = clamp(pr.shade, 0.45, 1.2)
       const isFocus = focusing && i === this.focusIndex
@@ -702,19 +761,19 @@ export class GalaxyField {
     this._star(x, y, 'you', 1.9 + (1 - e) * 0.5, 14 - e * 2, breathe)
   }
 
-  // MATCH — reworked to match the rest of the field's calm, drifting language:
-  // two stars drift together along gentle arcs, meet in a soft bloom (no
-  // shockwave, no shrapnel), then settle into a slow, breathing binary linked by
-  // a luminous bridge, with a few motes drawn quietly inward.
+  // MATCH — calm, on-theme coalescence. The two stars drift together along
+  // gentle arcs linked by a brightening light-bridge (the part worth keeping),
+  // meet in a single soft bloom, draw a few faint motes STRAIGHT inward (no
+  // orbiting, no shockwave, no shrapnel), and settle into ONE still star
+  // breathing inside layered amber/rose haloes — nothing spins.
   _drawMatch(dt) {
     const ctx = this.ctx
     const t = this.modeT
-    // Stage the meeting in the open space below the headline + handle chips, so
-    // the calm binary reads clearly instead of forming behind the text.
+    // Stage the meeting in the open space below the headline + handle chips.
     const cx = this.cx
     const cy = this.h * 0.6
 
-    const APPROACH = 2.4
+    const APPROACH = 2.6
     const e = easeInOut(Math.min(1, t / APPROACH))
     const gap = this.unit * 0.5 * (1 - e)
     const arc = Math.sin((1 - e) * Math.PI) * this.unit * 0.1 // gentle bow, decays to 0
@@ -726,11 +785,11 @@ export class GalaxyField {
     ctx.globalCompositeOperation = 'lighter'
 
     // luminous bridge brightens as they near
-    if (e > 0.32) {
-      const fa = clamp((e - 0.32) / 0.68, 0, 1)
+    if (e > 0.3) {
+      const fa = clamp((e - 0.3) / 0.7, 0, 1)
       const lg = ctx.createLinearGradient(xA, yA, xB, yB)
       lg.addColorStop(0, this._rgba(this.you, 0))
-      lg.addColorStop(0.5, `rgba(255,238,224,${0.4 * fa})`)
+      lg.addColorStop(0.5, `rgba(255,240,228,${0.42 * fa})`)
       lg.addColorStop(1, this._rgba(this.them, 0))
       ctx.strokeStyle = lg
       ctx.lineWidth = 1.4
@@ -741,83 +800,58 @@ export class GalaxyField {
     }
 
     if (t < APPROACH) {
-      this._heroGlow(xA, yA, 'you', 0.34)
-      this._heroGlow(xB, yB, 'them', 0.34)
-      this._star(xA, yA, 'you', 2.0, 14, 0.5)
-      this._star(xB, yB, 'them', 2.0, 14, 0.5)
+      this._heroGlow(xA, yA, 'you', 0.4)
+      this._heroGlow(xB, yB, 'them', 0.4)
+      this._star(xA, yA, 'you', 2.0, 15, 0.55)
+      this._star(xB, yB, 'them', 2.0, 15, 0.55)
       return
     }
 
     const bt = t - APPROACH
 
     // a single soft bloom of light that swells then fades — the moment of meeting
-    const bloom = Math.exp(-bt * 1.5) * (1 - Math.exp(-bt * 6))
-    if (bloom > 0.008) {
-      const fr = this.unit * (0.16 + bt * 0.12)
+    const bloom = Math.exp(-bt * 1.3) * (1 - Math.exp(-bt * 5))
+    if (bloom > 0.006) {
+      const fr = this.unit * (0.18 + bt * 0.1)
       const fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, fr)
-      fg.addColorStop(0, `rgba(255,244,232,${0.62 * bloom})`)
-      fg.addColorStop(0.45, this._rgba(this.you, 0.3 * bloom))
+      fg.addColorStop(0, `rgba(255,246,236,${0.6 * bloom})`)
+      fg.addColorStop(0.4, this._rgba(this.you, 0.26 * bloom))
+      fg.addColorStop(0.7, this._rgba(this.them, 0.14 * bloom))
       fg.addColorStop(1, 'rgba(0,0,0,0)')
       ctx.fillStyle = fg
       ctx.fillRect(0, 0, this.w, this.h)
     }
 
-    // one slow, faint ring that expands once and dissolves (a ripple, not a shock)
-    if (bt < 2.4) {
-      const rt = easeOut(Math.min(1, bt / 2.4))
-      const rr = this.unit * (0.06 + rt * 0.5)
-      ctx.globalAlpha = clamp(0.3 * (1 - rt), 0, 0.3)
-      ctx.strokeStyle = 'rgba(255,236,224,1)'
-      ctx.lineWidth = 1.2
-      ctx.beginPath()
-      ctx.arc(cx, cy, rr, 0, TWO)
-      ctx.stroke()
-      ctx.globalAlpha = 1
-    }
-
-    // motes drift quietly inward then circle the pair — gentle inflow, no sparks
+    // a few faint motes drawn STRAIGHT inward, then gone — matter gathering, no
+    // circling. They fade as they reach the center (one-shot inflow).
     if (!this.motes) {
       this.motes = []
-      for (let i = 0; i < 14; i++) {
-        this.motes.push({ a: Math.random() * TWO, r0: this.unit * (0.18 + Math.random() * 0.26), sp: 0.4 + Math.random() * 0.5, col: Math.random() < 0.5 ? 'you' : 'them', ph: Math.random() * TWO })
+      for (let i = 0; i < 10; i++) {
+        this.motes.push({ a: Math.random() * TWO, r0: this.unit * (0.14 + Math.random() * 0.22), sp: 0.5 + Math.random() * 0.5, col: Math.random() < 0.5 ? 'you' : 'them', ph: Math.random() * TWO })
       }
     }
+    const gather = easeInOut(clamp(bt / 1.8, 0, 1))
     for (const m of this.motes) {
-      const settle = easeOut(clamp(bt / 2.2, 0, 1))
-      const rr = m.r0 * (1 - 0.72 * settle) * (1 + 0.08 * Math.sin(t * m.sp + m.ph))
-      const ang = m.a + t * m.sp * 0.5
-      const x = cx + Math.cos(ang) * rr
-      const y = cy + Math.sin(ang) * rr * 0.7
-      ctx.globalAlpha = 0.32 * (0.6 + 0.4 * Math.sin(t * 1.5 + m.ph))
+      const rr = m.r0 * (1 - gather)
+      const x = cx + Math.cos(m.a) * rr
+      const y = cy + Math.sin(m.a) * rr * 0.8
+      const a = 0.3 * (1 - gather) * (0.6 + 0.4 * Math.sin(t * m.sp + m.ph))
+      if (a <= 0.01) continue
+      ctx.globalAlpha = a
       ctx.drawImage(this.glows[m.col], x - 3, y - 3, 6, 6)
     }
     ctx.globalAlpha = 1
 
-    // joined core: a still bright point inside a breathing halo
-    const breathe = 1 + 0.1 * Math.sin(t * 1.6)
-    this._star(cx, cy, 'warm', 0.1, 30 * breathe, 0.16)
-    this._star(cx, cy, 'white', 2.3 * breathe, 19 * breathe, 0.5)
-
-    // the two stars settle into a calm, close mutual orbit, linked by a soft bridge
-    const orbR = this.unit * 0.045 * (1 + 0.08 * Math.sin(t * 0.8))
-    const oa = t * 0.6
-    const ax = cx + Math.cos(oa) * orbR,
-      ay = cy + Math.sin(oa) * orbR * 0.7
-    const bx = cx + Math.cos(oa + Math.PI) * orbR,
-      by = cy + Math.sin(oa + Math.PI) * orbR * 0.7
-    const lg2 = ctx.createLinearGradient(ax, ay, bx, by)
-    lg2.addColorStop(0, this._rgba(this.you, 0.5))
-    lg2.addColorStop(0.5, 'rgba(255,240,228,0.5)')
-    lg2.addColorStop(1, this._rgba(this.them, 0.5))
-    ctx.globalCompositeOperation = 'lighter'
-    ctx.strokeStyle = lg2
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(bx, by)
-    ctx.stroke()
-    this._star(ax, ay, 'you', 1.5, 10, 0.5)
-    this._star(bx, by, 'them', 1.5, 10, 0.5)
+    // the joined star: a single calm point breathing inside layered haloes. The
+    // amber + rose inner glows fold into a unified white core — one star, still.
+    const settle = easeOut(clamp(bt / 1.5, 0, 1))
+    const breathe = 1 + 0.08 * Math.sin(t * 1.4)
+    this._star(cx, cy, 'warm', 0.1, (34 + settle * 6) * breathe, 0.14)
+    this._heroGlow(cx, cy, 'you', 1.4 * (1 - settle * 0.4))
+    this._heroGlow(cx, cy, 'them', 1.4 * (1 - settle * 0.4))
+    this._star(cx, cy, 'white', (1.9 + settle * 0.7) * breathe, (18 + settle * 5) * breathe, 0.55)
+    ctx.globalAlpha = 1
+    ctx.globalCompositeOperation = 'source-over'
   }
 
   _heroGlow(x, y, color, alpha) {

@@ -12,7 +12,7 @@ import { useI18n } from '../i18n/index.js'
 import { PRICE_LABEL } from '../api/pay.js'
 import {
   Brandmark, PrimaryButton, GhostButton, Field, HandleChip, HandleSearchField,
-  StepDots, BackBtn, Icon, rgba,
+  StepDots, BackBtn, Icon, Sonar, rgba,
 } from './ui.jsx'
 
 // Shared centered column: at least one dynamic-viewport tall (so the flex spacers
@@ -87,39 +87,45 @@ const INTRO_STEPS = ['intro.s1', 'intro.s2', 'intro.s3', 'intro.s4', 'intro.s5']
 export function IntroScreen({ C, ctx }) {
   const { t } = useI18n()
   const [i, setI] = React.useState(0)
-  const done = i >= INTRO_STEPS.length
+  const last = INTRO_STEPS.length - 1
+  // Advance one beat — past the final beat the slideshow hands off into the flow.
+  // Used by both the gentle auto-play timer and a tap anywhere on the field, so
+  // tapping skips ahead through the slides (there is no separate "skip" control).
+  const advance = React.useCallback(() => {
+    setI((n) => {
+      if (n >= last) {
+        ctx.finishIntro()
+        return n
+      }
+      return n + 1
+    })
+  }, [ctx, last])
   React.useEffect(() => {
-    if (done) return
-    const id = setTimeout(() => setI((n) => n + 1), i === 0 ? 2600 : 3000)
+    const id = setTimeout(advance, i === 0 ? 3200 : 3800)
     return () => clearTimeout(id)
-  }, [i, done])
+  }, [i, advance])
   // tell App which galaxy mode to play behind each beat (collision on the last two)
   React.useEffect(() => {
-    ctx.onIntroStep?.(done ? INTRO_STEPS.length - 1 : i)
-  }, [i, done, ctx])
+    ctx.onIntroStep?.(i)
+  }, [i, ctx])
   return (
-    <GalaxyShell>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        {!done && <GhostButton C={C} onClick={ctx.finishIntro} style={{ fontSize: 12 }}>{t('intro.skip')} →</GhostButton>}
-      </div>
+    <GalaxyShell onBackdropTap={advance}>
+      <div style={{ minHeight: 34 }} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20 }}>
-        {!done ? (
-          <p key={i} className="intro-line" style={{ margin: 0, maxWidth: 360, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(24px, 6.5vw, 32px)', lineHeight: 1.3, color: C.cream, textShadow: '0 4px 30px rgba(0,0,0,.6)' }}>
-            {t(INTRO_STEPS[i])}
-          </p>
-        ) : (
-          <PrimaryButton C={C} onClick={ctx.finishIntro} style={{ maxWidth: 280 }}>
-            {t('intro.begin')}
-          </PrimaryButton>
-        )}
+        <p key={i} className="intro-line" style={{ margin: 0, maxWidth: 360, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(24px, 6.5vw, 32px)', lineHeight: 1.3, color: C.cream, textShadow: '0 4px 30px rgba(0,0,0,.6)' }}>
+          {t(INTRO_STEPS[i])}
+        </p>
       </div>
-      {!done && (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 13 }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
           {INTRO_STEPS.map((_, k) => (
             <span key={k} style={{ width: k === i ? 18 : 6, height: 6, borderRadius: 99, background: k === i ? C.you : C.line, transition: 'all .3s' }} />
           ))}
         </div>
-      )}
+        <span style={{ fontSize: 11, color: C.muted, letterSpacing: '.4px', fontFamily: "'Space Mono', monospace" }}>
+          {i >= last ? t('intro.tapBegin') : t('intro.tapNext')}
+        </span>
+      </div>
     </GalaxyShell>
   )
 }
@@ -128,10 +134,8 @@ export function IntroScreen({ C, ctx }) {
 export function LandingScreen({ C, t: screenT, ctx }) {
   const { t } = useI18n()
   const head = [t('landing.head1'), t('landing.head2')]
-  const start = () => {
-    if (!ctx.over18) ctx.affirmAge()
-    ctx.go('you')
-  }
+  // "Find out" now opens the explainer slideshow, which hands into the flow.
+  const start = () => ctx.findOut()
   return (
     <GalaxyShell>
       <div className="enter" style={{ display: 'flex', justifyContent: 'center' }}>
@@ -160,7 +164,7 @@ export function LandingScreen({ C, t: screenT, ctx }) {
           </span>
           <span style={{ width: 3, height: 3, borderRadius: '50%', background: C.line }} />
           {/* replaces the old "why it's free →" — a replayable intro instead */}
-          <GhostButton C={C} onClick={() => ctx.go('intro')} style={{ padding: 0, fontSize: 12 }}>
+          <GhostButton C={C} onClick={() => ctx.watchIntro()} style={{ padding: 0, fontSize: 12 }}>
             {t('landing.watch')} →
           </GhostButton>
         </div>
@@ -286,14 +290,19 @@ export function ThemScreen({ C, ctx }) {
         </h2>
         <div className="enter" style={{ animationDelay: '.08s' }}>
           <HandleSearchField C={C} value={ctx.them} onChange={ctx.setThem} placeholder={t('them.handle')} accent={C.them} autoFocus onEnter={onSeal} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 14, color: C.muted, fontSize: 12 }}>
-            <Icon name="eye" size={13} color={C.muted} /> {t('them.note')}
-          </div>
-          {confirming && valid && (
-            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, background: C.ink2, border: `1px solid ${rgba(C.them, 0.3)}` }}>
-              <span style={{ color: C.muted, fontSize: 13 }}>{t('them.confirm1')} </span>
+          {/* The note and the confirm prompt share this line, crossfading in
+              place — the confirmation is woven into the same quiet copy slot
+              instead of popping a bordered box on top of the layout. */}
+          {confirming && valid ? (
+            <div key="confirm" className="fade" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 7px', marginTop: 14, color: C.muted, fontSize: 13, lineHeight: 1.5 }}>
+              <Icon name="lock" size={13} color={rgba(C.them, 0.85)} />
+              <span>{t('them.confirm1')}</span>
               <HandleChip C={C} handle={normd} color={C.them} />
-              <span style={{ color: C.muted, fontSize: 13 }}> {t('them.confirm2')}</span>
+              <span>{t('them.confirm2')}</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 14, color: C.muted, fontSize: 12 }}>
+              <Icon name="eye" size={13} color={C.muted} /> {t('them.note')}
             </div>
           )}
           {ctx.error && <div style={{ marginTop: 12, color: C.them, fontSize: 13 }}>{ctx.error}</div>}
@@ -332,22 +341,30 @@ export function SendoffScreen({ C }) {
 // ── 5 · RESTING (interactive field — tap a star to look closer) ────────────
 export function RestingScreen({ C, ctx }) {
   const { t } = useI18n()
+  const zoomed = ctx.zoomed
   // Tap anywhere on the field: if it lands on a star, the camera drifts in.
   const onBackdropTap = (e) => {
     if (e.target.closest('button, a, input')) return // don't hijack controls
     ctx.onStarTap(e.clientX, e.clientY)
   }
+  // When the camera drifts into a star, the whole "It's out there" layer fades
+  // away (and stops catching taps) so it never sits over the close-up or the
+  // star's card; it eases back in when the camera pulls out.
+  const veil = {
+    opacity: zoomed ? 0 : 1,
+    transform: zoomed ? 'translateY(8px)' : 'none',
+    pointerEvents: zoomed ? 'none' : 'auto',
+    transition: 'opacity .5s ease, transform .5s ease',
+  }
   return (
-    <GalaxyShell onBackdropTap={onBackdropTap}>
-      {/* The "LISTENING" corner badge was removed — chrome is now consistent
-          across every screen; only the brandmark stays. */}
-      <div className="enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <GalaxyShell onBackdropTap={zoomed ? undefined : onBackdropTap}>
+      <div className="enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', ...veil }}>
         <Brandmark C={C} size={13} />
       </div>
 
       <div style={{ flex: 1, minHeight: 150 }} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, ...veil }}>
         <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(30px, 7vw, 38px)', lineHeight: 1.14, color: C.cream }}>
           {t('resting.title')}
         </h2>
@@ -362,7 +379,7 @@ export function RestingScreen({ C, ctx }) {
         )}
       </div>
 
-      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 28 }}>
+      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 28, ...veil }}>
         <GhostButton C={C} onClick={() => ctx.checkAnother()}>
           {t('resting.another')}
         </GhostButton>
@@ -381,55 +398,71 @@ export function RestingScreen({ C, ctx }) {
   )
 }
 
-// Star detail overlay — rendered by App on top of the focused galaxy. Responsive:
-// a bottom sheet on phones, a calm centered card on wider screens.
+// Star detail overlay — rendered by App on top of the focused galaxy. A calm
+// sheet that rises from the bottom on phones and settles as a centered card on
+// wider screens. Styled from the same tokens as every other surface (ink glass,
+// the shared Sonar ping, a hairline divider) so it reads as one product — and
+// it only ever shows while the camera is zoomed in, so it never overlaps the
+// "It's out there" layer (which fades out on zoom).
 export function StarDetail({ C, info, lang, onRemove, onClose }) {
   const { t } = useI18n()
+  const [removing, setRemoving] = React.useState(false)
   if (!info) return null
   const when = info.time ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }).format(new Date(info.time)) : null
+  const remove = () => {
+    if (removing) return
+    setRemoving(true)
+    onRemove()
+  }
   return (
     <div
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'clamp(0px, 4vw, 40px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'clamp(0px, 4vw, 6vh)' }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="enter"
         style={{
-          width: '100%', maxWidth: 420, padding: '22px 22px max(22px, env(safe-area-inset-bottom))',
-          borderRadius: 'clamp(16px, 4vw, 22px)', background: rgba(C.ink2, 0.92), border: `1px solid ${C.line}`,
-          boxShadow: '0 -10px 60px rgba(0,0,0,.55)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+          width: '100%', maxWidth: 400, padding: '14px 24px max(24px, env(safe-area-inset-bottom))',
+          borderRadius: 'clamp(20px, 5vw, 26px)', background: rgba(C.ink2, 0.86), border: `1px solid ${C.line}`,
+          boxShadow: '0 -16px 70px rgba(0,0,0,.55)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            {info.handle ? (
-              <HandleChip C={C} handle={info.handle} color={C.them} big />
-            ) : (
-              <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 22, color: C.cream }}>✦</span>
-            )}
-            <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.you, fontFamily: "'Space Mono', monospace", letterSpacing: '.3px' }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.you, boxShadow: `0 0 8px 1px ${rgba(C.you, 0.7)}`, animation: 'breathe 3s ease-in-out infinite' }} />
-              {t('star.waiting')}
-            </div>
-            {when && <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>{t('star.registered')} · {when}</div>}
-          </div>
-          <button onClick={onClose} aria-label={t('star.close')} style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: C.ink3, border: `1px solid ${C.line}`, cursor: 'pointer', display: 'grid', placeItems: 'center', color: C.muted }}>
-            <Icon name="x" size={15} color="currentColor" />
-          </button>
+        {/* grabber — the one consistent affordance for a sheet you can dismiss */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
+          <span style={{ width: 38, height: 4, borderRadius: 99, background: C.line }} />
         </div>
 
-        <button
-          onClick={onRemove}
-          style={{
-            marginTop: 20, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            padding: '13px 18px', borderRadius: 13, cursor: 'pointer',
-            background: 'transparent', border: `1px solid ${rgba(C.them, 0.4)}`, color: C.them,
-            fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 14,
-          }}
-        >
-          <Icon name="trash" size={16} color={C.them} /> {t('star.remove')}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
+          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10.5, letterSpacing: '3px', textTransform: 'uppercase', color: C.muted }}>
+            {t('star.kicker')}
+          </div>
+          {info.handle ? (
+            <HandleChip C={C} handle={info.handle} color={C.them} big />
+          ) : (
+            <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 26, color: C.cream }}>✦</span>
+          )}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 12.5, color: C.you, fontFamily: "'Space Mono', monospace", letterSpacing: '.3px' }}>
+            <Sonar C={C} color={C.you} size={14} />
+            {t('star.waiting')}
+          </div>
+          {when && <div style={{ fontSize: 12, color: C.muted }}>{t('star.registered')} · {when}</div>}
+        </div>
+
+        <div style={{ height: 1, background: C.line, margin: '20px 0 16px' }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <GhostButton
+            C={C}
+            onClick={remove}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: removing ? C.muted : C.them, fontSize: 13.5 }}
+          >
+            <Icon name="trash" size={15} color="currentColor" /> {removing ? t('star.removing') : t('star.remove')}
+          </GhostButton>
+          <GhostButton C={C} onClick={onClose} style={{ padding: '6px', fontSize: 12, color: C.muted }}>
+            {t('star.keep')}
+          </GhostButton>
+        </div>
       </div>
     </div>
   )
