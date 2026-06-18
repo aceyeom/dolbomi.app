@@ -1,38 +1,31 @@
-// ui.jsx — warm minimal primitives for CELESTE (galaxy edition).
+// ui.jsx — minimal primitives for CELESTE (galaxy edition). All color comes from
+// the single source of truth in ../theme.js — nothing defines its own hexes — so
+// the whole product reads as one cosmos on every screen.
 import * as React from 'react'
 import { GalaxyField } from '../galaxy.js'
+import { makeColors, rgba } from '../theme.js'
+import { searchHandles, normHandle } from '../api/still.js'
 
-export function makeColors(palette) {
-  const you = (palette && palette[0]) || '#FF8C66'
-  const them = (palette && palette[1]) || '#FF5E8A'
-  return {
-    ink: '#0B0910',
-    ink2: '#15111F',
-    ink3: '#1E1830',
-    cream: '#F4ECE3',
-    muted: '#9C90B4',
-    line: 'rgba(244,236,227,0.10)',
-    you,
-    them,
-  }
-}
-
-export function rgba(hex, a) {
-  const h = hex.replace('#', '')
-  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`
-}
+export { makeColors, rgba }
 
 const clampN = (v, a, b) => (v < a ? a : v > b ? b : v)
 
-// warm gradient backdrop for the calm entry screens (no canvas)
+// Calm gradient backdrop for the entry screens (no canvas). It shares the deep
+// cosmic-violet base with the galaxy and only lets the two star accents glow
+// faintly through, so moving between the galaxy and these screens never swings
+// to a different color world. A violet wash sits under the warm accent to keep
+// it in the same family.
 export function WarmBg({ C, variant = 'center', children }) {
+  const violet = 'rgba(126,107,168,0.14)' // ties the wash to the galaxy's nebula
   const g = {
-    center: `radial-gradient(560px 480px at 50% 34%, ${rgba(C.you, 0.18)}, transparent 70%),
+    center: `radial-gradient(560px 480px at 50% 34%, ${rgba(C.you, 0.15)}, transparent 70%),
+             radial-gradient(620px 560px at 50% 36%, ${violet}, transparent 74%),
              radial-gradient(460px 420px at 82% 96%, ${rgba(C.them, 0.12)}, transparent 72%)`,
-    low: `radial-gradient(540px 440px at 50% 90%, ${rgba(C.you, 0.18)}, transparent 72%),
+    low: `radial-gradient(540px 440px at 50% 90%, ${rgba(C.you, 0.15)}, transparent 72%),
+             radial-gradient(600px 520px at 50% 88%, ${violet}, transparent 76%),
              radial-gradient(380px 340px at 14% 8%, ${rgba(C.them, 0.1)}, transparent 74%)`,
-    quiet: `radial-gradient(640px 520px at 50% 16%, ${rgba(C.you, 0.11)}, transparent 72%)`,
+    quiet: `radial-gradient(640px 520px at 50% 16%, ${rgba(C.you, 0.1)}, transparent 72%),
+             radial-gradient(700px 560px at 50% 14%, ${violet}, transparent 76%)`,
   }
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: C.ink }}>
@@ -382,6 +375,165 @@ export function BackBtn({ C, onClick }) {
   )
 }
 
+// Compact language switcher (browser-lang is auto-detected; this is the manual
+// override). A globe button that reveals the curated locales. Sits unobtrusively
+// in a screen corner and works the same on phone and desktop.
+export function LanguageSwitcher({ C, lang, langs, onChange }) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    if (!open) return
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDoc)
+    return () => document.removeEventListener('pointerdown', onDoc)
+  }, [open])
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Language"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 11px',
+          borderRadius: 999, background: rgba(C.ink2, 0.7), border: `1px solid ${C.line}`,
+          color: C.muted, cursor: 'pointer', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+          fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: '.3px',
+        }}
+      >
+        <Icon name="globe" size={14} color={C.muted} />
+        <span style={{ textTransform: 'uppercase' }}>{lang}</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: 'absolute', top: 40, right: 0, zIndex: 30, minWidth: 150, padding: 6,
+            borderRadius: 14, background: rgba(C.ink2, 0.96), border: `1px solid ${C.line}`,
+            boxShadow: '0 18px 50px rgba(0,0,0,.5)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            maxHeight: '60vh', overflowY: 'auto',
+          }}
+        >
+          {Object.entries(langs).map(([code, name]) => (
+            <button
+              key={code}
+              onClick={() => {
+                onChange(code)
+                setOpen(false)
+              }}
+              style={{
+                display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                padding: '10px 12px', borderRadius: 9, border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: code === lang ? rgba(C.you, 0.12) : 'transparent',
+                color: code === lang ? C.cream : C.muted, fontFamily: "'Space Grotesk', sans-serif", fontSize: 14,
+              }}
+            >
+              {name}
+              {code === lang && <Icon name="check" size={15} color={C.you} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Instagram-style @ search. It's a normal validated handle field (manual entry
+// always works) with a live typeahead dropdown layered on top. Results come from
+// the pluggable searchHandles() adapter — empty until a server-side provider is
+// wired, at which point suggestions appear automatically with no UI change.
+export function HandleSearchField({ C, value, onChange, placeholder, accent, autoFocus, onEnter }) {
+  const [results, setResults] = React.useState([])
+  const [open, setOpen] = React.useState(false)
+  const [active, setActive] = React.useState(-1)
+  const seq = React.useRef(0)
+  React.useEffect(() => {
+    const q = normHandle(value)
+    if (q.length < 2) {
+      setResults([])
+      return
+    }
+    const my = ++seq.current
+    const id = setTimeout(async () => {
+      const r = await searchHandles(q)
+      if (my === seq.current) {
+        setResults(r)
+        setActive(-1)
+      }
+    }, 220)
+    return () => clearTimeout(id)
+  }, [value])
+  const show = open && results.length > 0
+  const pick = (h) => {
+    onChange(normHandle(h))
+    setResults([])
+    setOpen(false)
+  }
+  return (
+    <div style={{ position: 'relative' }} onFocusCapture={() => setOpen(true)}>
+      <Field
+        C={C}
+        kind="handle"
+        value={value}
+        onChange={(v) => {
+          onChange(v)
+          setOpen(true)
+        }}
+        placeholder={placeholder}
+        accent={accent}
+        autoFocus={autoFocus}
+        emphasis
+        onEnter={() => {
+          if (show && active >= 0) pick(results[active].handle)
+          else if (onEnter) onEnter()
+        }}
+      />
+      {show && (
+        <div
+          style={{
+            position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 25, padding: 6,
+            borderRadius: 14, background: rgba(C.ink2, 0.97), border: `1px solid ${C.line}`,
+            boxShadow: '0 18px 50px rgba(0,0,0,.5)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            maxHeight: 280, overflowY: 'auto',
+          }}
+        >
+          {results.map((r, i) => (
+            <button
+              key={r.handle}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => pick(r.handle)}
+              style={{
+                display: 'flex', width: '100%', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 10,
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: i === active ? rgba(C.you, 0.1) : 'transparent',
+              }}
+            >
+              <span
+                style={{
+                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                  background: rgba(accent || C.you, 0.18), display: 'grid', placeItems: 'center',
+                }}
+              >
+                {r.avatar ? (
+                  <img src={r.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span style={{ color: accent || C.you, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>@</span>
+                )}
+              </span>
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: C.cream, fontFamily: "'Space Mono', monospace", fontSize: 14 }}>
+                  {r.handle}
+                  {r.verified && <Icon name="check" size={13} color={accent || C.you} />}
+                </span>
+                {r.full_name && <span style={{ display: 'block', color: C.muted, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.full_name}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Icon({ name, size = 16, color = 'currentColor', stroke = 1.8 }) {
   const p = { fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round', strokeLinejoin: 'round' }
   const paths = {
@@ -420,6 +572,22 @@ export function Icon({ name, size = 16, color = 'currentColor', stroke = 1.8 }) 
       </>
     ),
     star: <path d="M10 2.5l1.6 5 5 .2-4 3.1 1.5 4.9-4.1-3-4.1 3 1.5-4.9-4-3.1 5-.2z" {...p} />,
+    globe: (
+      <>
+        <circle cx="10" cy="10" r="7" {...p} />
+        <path d="M3 10h14M10 3c2 2.2 2 11.8 0 14M10 3c-2 2.2-2 11.8 0 14" {...p} />
+      </>
+    ),
+    x: (
+      <>
+        <path d="M5 5l10 10M15 5L5 15" {...p} />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6M6.5 6l.6 9a1 1 0 001 .9h3.8a1 1 0 001-.9l.6-9" {...p} />
+      </>
+    ),
   }
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" style={{ display: 'block', flexShrink: 0 }}>

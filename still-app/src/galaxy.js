@@ -91,6 +91,12 @@ export class GalaxyField {
     // Each sealed person becomes a persistent star resting in the disk; the set
     // stacks across the session so "more people → more stars".
     this.sealed = []
+    // Camera focus on a single star (the interactive resting field): the camera
+    // drifts toward sealed[focusIndex] and zooms in; everything else recedes.
+    this.focus = 0 // eased 0..1
+    this.focusTarget = 0
+    this.focusIndex = -1
+    this.focusScreen = { x: 0, y: 0, vis: false } // where the focused star sits now
     this._bind()
     this.resize()
   }
@@ -306,6 +312,38 @@ export class GalaxyField {
   setMotion(m) {
     this.motion = m
   }
+
+  // Drift the camera toward sealed star `i` and zoom in. Pass -1 (or clearFocus)
+  // to drift back out.
+  focusStar(i) {
+    if (i == null || i < 0 || i >= this.sealed.length) return this.clearFocus()
+    this.focusIndex = i
+    this.focusTarget = 1
+  }
+  clearFocus() {
+    this.focusTarget = 0
+  }
+
+  // Which sealed star (if any) is under a screen-space point — used to turn a
+  // tap into a focus. Only meaningful when not already zoomed (focus ≈ 0), where
+  // sealedScreen positions match raw screen coordinates. Returns index or -1.
+  hitTest(clientX, clientY, radius = 26) {
+    const arr = this.sealedScreen || []
+    let best = -1
+    let bestD = radius * radius
+    for (let i = 0; i < arr.length; i++) {
+      const ps = arr[i]
+      if (!ps || !ps.vis) continue
+      const dx = ps.x - clientX
+      const dy = ps.y - clientY
+      const d = dx * dx + dy * dy
+      if (d < bestD) {
+        bestD = d
+        best = i
+      }
+    }
+    return best
+  }
   setPalette(you, them) {
     this.you = you
     this.them = them
@@ -377,6 +415,13 @@ export class GalaxyField {
     this.lastTs = ts
     this.modeT += dt
     this.dim += (this.dimTarget - this.dim) * Math.min(1, dt * 2.2)
+    // ease the camera focus; release the index once we've drifted fully back out
+    this.focus += (this.focusTarget - this.focus) * Math.min(1, dt * 3.4)
+    if (this.focus < 0.002 && this.focusTarget === 0) {
+      this.focus = 0
+      this.focusIndex = -1
+      this.focusScreen.vis = false
+    }
     if (this.reduced) {
       // Reduced-motion: no spin, no parallax, no twinkle advance (_draw(0)). The
       // dim cross-fade and one-shot send-off settle still resolve, then it holds
@@ -384,7 +429,9 @@ export class GalaxyField {
       this._draw(0)
     } else {
       this.t += dt
-      this.spin += dt * (this.motion / 100) * 0.16
+      // nearly freeze the slow orbit while a star is held in focus, so it sits
+      // still under the camera instead of drifting out of frame
+      this.spin += dt * (this.motion / 100) * 0.16 * (1 - this.focus * 0.96)
       this.p.x = lerp(this.p.x, this.pTarget.x, Math.min(1, dt * 2.6))
       this.p.y = lerp(this.p.y, this.pTarget.y, Math.min(1, dt * 2.6))
       this._draw(dt)
@@ -413,6 +460,27 @@ export class GalaxyField {
     const o = this._project(0, 0, 0, rot) || { sx: this.cx, sy: this.cy, persp: 1 }
     this.ox = o.sx
     this.oy = o.sy
+
+    // Camera focus: zoom the galaxy toward the focused star so it eases to the
+    // center of frame. The deep backdrop stays put (space is far); only the disk
+    // and stars move — reading as the camera drifting in. Mapped so that at
+    // focus=0 it's the identity transform (no seam when there's no focus).
+    let _focusSaved = false
+    if (this.focus > 0.001 && this.focusIndex >= 0 && this.focusIndex < this.sealed.length) {
+      const fp = this._sealedAt(this.sealed[this.focusIndex], rot)
+      if (fp) {
+        const f = this.focus
+        const scale = 1 + f * 1.9
+        const ctX = lerp(fp.sx, this.cx, f)
+        const ctY = lerp(fp.sy, this.cy, f)
+        this.focusScreen = { x: ctX, y: ctY, vis: true }
+        ctx.save()
+        ctx.translate(ctX, ctY)
+        ctx.scale(scale, scale)
+        ctx.translate(-fp.sx, -fp.sy)
+        _focusSaved = true
+      }
+    }
 
     // nebula gas (additive, behind the stars)
     this._drawNebula(dt, d, rot)
@@ -465,6 +533,7 @@ export class GalaxyField {
     }
 
     this._drawHero(dt, rot)
+    if (_focusSaved) ctx.restore()
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
   }
@@ -542,6 +611,7 @@ export class GalaxyField {
 
   _drawSealed(rot, excludeLast) {
     const n = this.sealed.length
+    const focusing = this.focus > 0.001
     for (let i = 0; i < n; i++) {
       // the flying star's screen position is owned by _drawFlyIn this frame
       if (excludeLast && i === n - 1) continue
@@ -552,7 +622,21 @@ export class GalaxyField {
       }
       const pulse = 0.78 + 0.22 * Math.sin(this.t * 1.3 + this.sealed[i].phase)
       const sh = clamp(pr.shade, 0.45, 1.2)
-      this._star(pr.sx, pr.sy, 'you', Math.max(1.1, 1.9 * pr.persp), 12 * pr.persp * pulse, 0.5 * pulse * sh)
+      const isFocus = focusing && i === this.focusIndex
+      // non-focused stars recede; the focused one brightens and grows a ring
+      const fade = focusing ? (isFocus ? 1 : 1 - 0.82 * this.focus) : 1
+      const core = Math.max(1.1, 1.9 * pr.persp) * (isFocus ? 1 + this.focus * 0.6 : 1)
+      this._star(pr.sx, pr.sy, 'you', core, 12 * pr.persp * pulse, 0.5 * pulse * sh * fade)
+      if (isFocus && this.focus > 0.12) {
+        const ctx = this.ctx
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.strokeStyle = this._rgba(this.you, 0.5 * this.focus)
+        ctx.lineWidth = 1.2
+        ctx.beginPath()
+        ctx.arc(pr.sx, pr.sy, 9 + 3 * Math.sin(this.t * 2), 0, TWO)
+        ctx.stroke()
+        ctx.globalCompositeOperation = 'source-over'
+      }
       // each resting star carries its own tag — record where it is on screen
       this.sealedScreen[i] = { x: pr.sx, y: pr.sy, vis: true }
     }

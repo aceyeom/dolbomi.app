@@ -1,38 +1,41 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { submitStill, withdrawStill, suppressHandle, normHandle, isValidHandle } from './api/still.js'
-import { makeColors, GalaxyCanvas, WarmBg, StarTags, Liftoff } from './components/ui.jsx'
-import { LandingScreen, YouScreen, ThemScreen, SendoffScreen, RestingScreen, MatchScreen, PricingScreen, PrivacyScreen } from './components/screens.jsx'
+import { getSession, signInWithMeta, resumeSession } from './api/auth.js'
+import { canSealIndex, startCheckout as payStart } from './api/pay.js'
+import { makeColors, PALETTE } from './theme.js'
+import { GalaxyCanvas, WarmBg, StarTags, Liftoff, LanguageSwitcher } from './components/ui.jsx'
+import {
+  AuthScreen, IntroScreen, LandingScreen, YouScreen, ThemScreen, SendoffScreen,
+  RestingScreen, MatchScreen, PricingScreen, CheckoutScreen, PrivacyScreen, StarDetail,
+} from './components/screens.jsx'
+import { useI18n } from './i18n/index.js'
 
-// Galaxy-edition config. Palette = [you, them]; motion drives the starfield swirl.
-const PALETTE = ['#FF8C66', '#FF5E8A']
 const MOTION = 20
-const HEAD = [{ t: 'Does your ex still' }, { t: 'think about you?', em: true }]
 
 const SCREENS = {
+  auth: AuthScreen,
+  intro: IntroScreen,
   landing: LandingScreen,
   you: YouScreen,
   them: ThemScreen,
   sendoff: SendoffScreen,
   resting: RestingScreen,
-  // `match` is no longer reached from the live flow (deferred reveal, §2.3):
-  // the mutual "yes" lands by email. Kept as the home for a future verified
-  // reveal link, never routed to synchronously.
+  // `match` is not reached from the live flow (deferred reveal, §2.3) — kept for
+  // a future verified reveal link, and used as the intro's collision backdrop.
   match: MatchScreen,
   pricing: PricingScreen,
+  checkout: CheckoutScreen,
   privacy: PrivacyScreen,
 }
 
-// Where the @ becomes a star (normalized screen coords). Both the DOM morph
-// (Liftoff) and the galaxy's send-off drift use this exact point, so the star
-// hands off from one to the other without a seam. Module-constant => stable
-// reference, so it doesn't re-fire the galaxy's setMode effect every render.
+// Where the @ becomes a star (normalized screen coords) — module-constant so it
+// doesn't re-fire the galaxy's setMode effect every render.
 const SENDOFF_ORIGIN = { x: 0.5, y: 0.43 }
 
-// One persistent background lives at the App level so it never remounts between
-// screens — the galaxy keeps spinning and your stars stay put. Each screen just
-// declares which backdrop it wants and we cross-fade the warm overlay on top of
-// the always-running galaxy canvas.
+// One persistent background for the whole session. Each screen declares the
+// galaxy mode + whether the calm overlay fades in on top.
 const BG = {
+  auth: { warm: true, variant: 'quiet', mode: 'idle' },
   landing: { warm: false, mode: 'idle', dim: 0.62 },
   you: { warm: true, variant: 'quiet', mode: 'idle' },
   them: { warm: true, variant: 'low', mode: 'idle' },
@@ -40,12 +43,18 @@ const BG = {
   resting: { warm: false, mode: 'resting' },
   match: { warm: false, mode: 'match' },
   pricing: { warm: true, variant: 'quiet', mode: 'idle' },
+  checkout: { warm: true, variant: 'quiet', mode: 'idle' },
   privacy: { warm: true, variant: 'quiet', mode: 'idle' },
 }
 
 const STORE = 'celeste:v1'
+const INTRO_SEEN = 'celeste:introSeen'
+
+// /demo (at any base path) = zero verification, zero paywall.
+const isDemoPath = () => /(^|\/)demo\/?$/.test(window.location.pathname)
 
 export default function App() {
+  const { lang, setLang, langs, t } = useI18n()
   const C = useMemo(() => makeColors(PALETTE), [])
 
   const init = useMemo(() => {
@@ -56,79 +65,158 @@ export default function App() {
     }
   }, [])
 
-  // Never resume mid-animation: a stored 'sendoff' resolves to resting (there is
-  // no synchronous match outcome to resolve to anymore — §2.3).
-  const initialScreen = init.screen === 'sendoff' ? 'resting' : init.screen || 'landing'
+  const [demo] = useState(isDemoPath)
+  const [session, setSession] = useState(getSession)
+  const verified = !!session?.verified
 
-  const [screen, setScreen] = useState(initialScreen)
-  const [email, setEmail] = useState(init.email || '')
-  const [me, setMe] = useState(init.me || '')
-  // `them` and `handles` are SECRETS (who you pined for). Per §4.3 they are NOT
-  // persisted to localStorage — they live in memory only, so a shared device or
-  // a curious second user can't read them back from the browser store.
+  // First screen: Meta gate up front unless demo or already signed in; then the
+  // motion-graphic intro for new users; then resume where they were.
+  const introSeen = useMemo(() => {
+    try {
+      return !!localStorage.getItem(INTRO_SEEN)
+    } catch {
+      return false
+    }
+  }, [])
+  const firstScreen = () => {
+    if (!demo && !session) return 'auth'
+    if (!introSeen) return 'intro'
+    return init.screen === 'sendoff' ? 'resting' : init.screen || 'landing'
+  }
+
+  const [screen, setScreen] = useState(firstScreen)
+  const [email, setEmail] = useState(init.email || session?.email || '')
+  const [me, setMe] = useState(init.me || session?.handle || '')
+  // SECRETS (who you pined for) — never persisted (§4.3); memory only.
   const [them, setThem] = useState('')
   const [sealedAt, setSealedAt] = useState(init.sealedAt || null)
-  // One-time 18+ affirmation (§3, minors). Persisted so we only ask once.
   const [over18, setOver18] = useState(!!init.over18)
-  // How many people you've sent off — drives the count of resting stars.
   const [sealCount, setSealCount] = useState(init.sealCount || 0)
-  // The @ behind each resting star, aligned by index — in memory only (§4.3).
-  const [handles, setHandles] = useState([])
+  const [handles, setHandles] = useState([]) // memory-only, aligned by index
+  // Registry dates are NOT identifying, so they persist — the interactive field
+  // can show "sealed · <date>" even after a reload (handles stay memory-only).
+  const [sealTimes, setSealTimes] = useState(init.sealTimes || [])
   const [error, setError] = useState('')
-  // The @ → star morph overlay ({ handle }) and the live galaxy instance the
-  // star-tag follows.
   const [morph, setMorph] = useState(null)
+  const [introMode, setIntroMode] = useState('idle') // galaxy mode while intro plays
+  const [focused, setFocused] = useState(null) // index of the star the camera holds
   const galaxyRef = useRef(null)
 
   useEffect(() => {
+    // Persist only non-secret resume state — never the crush graph (§4.3).
     try {
-      // Persist only the minimum needed to resume — never the crush graph (§4.3).
-      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, sealedAt, over18, sealCount }))
+      localStorage.setItem(STORE, JSON.stringify({ screen, email, me, sealedAt, over18, sealCount, sealTimes }))
     } catch {
       /* private mode / quota — fine to skip */
     }
-  }, [screen, email, me, sealedAt, over18, sealCount])
+  }, [screen, email, me, sealedAt, over18, sealCount, sealTimes])
+
+  // Capture a returning Meta OAuth session on load.
+  useEffect(() => {
+    let live = true
+    resumeSession().then((s) => {
+      if (live && s) {
+        setSession(s)
+        if (s.email && !email) setEmail(s.email)
+        if (s.handle && !me) setMe(s.handle)
+        if (screen === 'auth') setScreen(introSeen ? 'landing' : 'intro')
+      }
+    })
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Drive the camera from the focused-star state.
+  useEffect(() => {
+    const f = galaxyRef.current
+    if (!f) return
+    if (focused != null) f.focusStar(focused)
+    else f.clearFocus()
+  }, [focused])
 
   const go = useCallback((s) => {
+    setFocused(null)
     setScreen(s)
     requestAnimationFrame(() => window.scrollTo(0, 0))
   }, [])
 
-  // Seal: record the one-way entry. Per §2.3 the server never reveals whether
-  // it's mutual — everyone lands on `resting`; a real match arrives by email.
-  // The galaxy "send-off" plays for at least ~3.2s so the moment still breathes.
+  // ── auth ──
+  const signIn = useCallback(async () => {
+    const s = await signInWithMeta() // null = redirect handoff; resumeSession resolves it
+    if (s) {
+      setSession(s)
+      if (s.email) setEmail(s.email)
+      if (s.handle) setMe(s.handle)
+      go(introSeen ? 'landing' : 'intro')
+    }
+  }, [go, introSeen])
+  const enterDemo = useCallback(() => {
+    try {
+      const base = window.location.pathname.replace(/\/+$/, '')
+      window.history.replaceState({}, '', (base.endsWith('/demo') ? base : base + '/demo') || '/demo')
+    } catch {
+      /* ignore */
+    }
+    go(introSeen ? 'landing' : 'intro')
+  }, [go, introSeen])
+
+  // ── intro ──
+  const finishIntro = useCallback(() => {
+    try {
+      localStorage.setItem(INTRO_SEEN, '1')
+    } catch {
+      /* ignore */
+    }
+    go('landing')
+  }, [go])
+  const onIntroStep = useCallback((i) => {
+    // the last two beats are the two stars colliding into one
+    setIntroMode(i >= 3 ? 'match' : 'idle')
+  }, [])
+
+  // Seal: record the one-way entry (server never reveals mutuality, §2.3).
   const seal = useCallback(async () => {
     setError('')
     if (!isValidHandle(me) || !isValidHandle(them)) {
-      setError('Enter a valid Instagram @ for both.')
+      setError(t('them.errInvalid'))
       return
     }
     if (normHandle(me) === normHandle(them)) {
-      setError("That's your own @. Enter theirs.")
+      setError(t('them.errSelf'))
       return
     }
-    setSealedAt(Date.now())
-    setSealCount((n) => n + 1) // a new star to fly out and join the field
-    setHandles((h) => [...h, normHandle(them)]) // its tag, aligned by index
-    // The typed @ ignites into a star (DOM morph) and the galaxy's drift picks it
-    // up from the same point — one continuous gesture into the field.
+    // Paywall: first star free, the rest gated (never on /demo).
+    if (!canSealIndex(sealCount, { demo })) {
+      go('checkout')
+      return
+    }
+    const now = Date.now()
+    setSealedAt(now)
+    setSealCount((n) => n + 1)
+    setHandles((h) => [...h, normHandle(them)])
+    setSealTimes((s) => [...s, now])
     setMorph({ handle: normHandle(them) })
     setTimeout(() => setMorph(null), 1250)
     go('sendoff')
     const minSuspense = new Promise((r) => setTimeout(r, 3200))
     try {
       const [res] = await Promise.all([submitStill({ me, ex: them, email }), minSuspense])
+      const rollback = () => {
+        setSealCount((n) => Math.max(0, n - 1))
+        setHandles((h) => h.slice(0, -1))
+        setSealTimes((s) => s.slice(0, -1))
+      }
       if (res?.error === 'rate_limited') {
-        setError('Whoa — slow down. Too many checks in a short time. Try again in a little while.')
-        setSealCount((n) => Math.max(0, n - 1)) // never landed — take the star back
-        setHandles((h) => h.slice(0, -1)) // …and its tag
+        setError(t('them.errRate'))
+        rollback()
         go('them')
         return
       }
       if (res?.error === 'suppressed') {
-        setError('That person has asked not to be entered on CELESTE. We can’t record this one.')
-        setSealCount((n) => Math.max(0, n - 1))
-        setHandles((h) => h.slice(0, -1))
+        setError(t('them.errSuppressed'))
+        rollback()
         go('them')
         return
       }
@@ -137,35 +225,77 @@ export default function App() {
       console.error(e)
       setSealCount((n) => Math.max(0, n - 1))
       setHandles((h) => h.slice(0, -1))
-      setError('Something went wrong. Try again.')
+      setSealTimes((s) => s.slice(0, -1))
+      setError(t('them.errGeneric'))
       go('them')
     }
-  }, [me, them, email, go])
+  }, [me, them, email, sealCount, demo, go, t])
 
-  // Multi-entry: keep your handle + email, point the next star at someone new.
+  // Multi-entry: gate the paywall here too (entering "more users"). First is free.
   const checkAnother = useCallback(() => {
     setThem('')
     setError('')
+    if (!canSealIndex(sealCount, { demo })) {
+      go('checkout')
+      return
+    }
     go('them')
+  }, [sealCount, demo, go])
+
+  const startCheckout = useCallback(async (provider) => {
+    const r = await payStart(provider) // real provider redirects away; dev path grants locally
+    if (r?.ok && (r.dev || !import.meta.env.VITE_PAY_ENABLED)) {
+      setThem('')
+      go('them')
+    }
   }, [go])
 
-  // Withdraw the most recent entry from this session (§4.6). Best-effort: also
-  // un-records it server-side so no future reveal can fire for that pair.
   const withdrawLast = useCallback(async () => {
     const last = handles[handles.length - 1]
-    if (!last) return
     setHandles((h) => h.slice(0, -1))
+    setSealTimes((s) => s.slice(0, -1))
     setSealCount((n) => Math.max(0, n - 1))
-    try {
-      await withdrawStill({ me, ex: last })
-    } catch (e) {
-      console.error(e)
+    if (last) {
+      try {
+        await withdrawStill({ me, ex: last })
+      } catch (e) {
+        console.error(e)
+      }
     }
     setThem('')
     go('you')
   }, [handles, me, go])
 
-  // "Forget on this device" (§4.3): wipe all local trace and reset to landing.
+  // Interactive field: tap → focus, remove → withdraw that star, close → zoom out.
+  const onStarTap = useCallback((x, y) => {
+    const f = galaxyRef.current
+    if (!f) return
+    const i = f.hitTest(x, y)
+    if (i >= 0) setFocused(i)
+  }, [])
+  const closeStar = useCallback(() => setFocused(null), [])
+  const removeStar = useCallback(
+    async (i) => {
+      const handle = handles[i]
+      setFocused(null)
+      setHandles((h) => h.filter((_, k) => k !== i))
+      setSealTimes((s) => s.filter((_, k) => k !== i))
+      setSealCount((n) => Math.max(0, n - 1))
+      if (handle) {
+        try {
+          await withdrawStill({ me, ex: handle })
+        } catch (e) {
+          console.error(e)
+        }
+      }
+    },
+    [handles, me],
+  )
+  const starInfo = useCallback(
+    (i) => (i == null ? null : { handle: handles[i] || null, time: sealTimes[i] || null }),
+    [handles, sealTimes],
+  )
+
   const forget = useCallback(() => {
     try {
       localStorage.removeItem(STORE)
@@ -178,38 +308,41 @@ export default function App() {
     setSealedAt(null)
     setSealCount(0)
     setHandles([])
+    setSealTimes([])
     setOver18(false)
     setError('')
     go('landing')
   }, [go])
 
   const affirmAge = useCallback(() => setOver18(true), [])
-
   const openConversation = useCallback(() => {
     const handle = normHandle(them)
     if (handle) window.open(`https://instagram.com/${handle}`, '_blank', 'noopener,noreferrer')
   }, [them])
 
-  const screenT = { motion: MOTION, head: HEAD }
   const ctx = {
-    email, me, them, sealedAt, over18, error,
-    setEmail, setMe, setThem, go, seal, checkAnother,
+    email, me, them, sealedAt, over18, error, demo, verified, sealCount,
+    setEmail, setMe, setThem, go, seal, checkAnother, startCheckout,
     withdrawLast, forget, affirmAge, suppressHandle, openConversation,
+    signIn, enterDemo, finishIntro, onIntroStep,
+    onStarTap, closeStar, removeStar,
     canWithdraw: handles.length > 0,
   }
   const Screen = SCREENS[screen] || SCREENS.landing
 
   const bg = BG[screen] || BG.landing
-  // Hold the last warm variant so the overlay doesn't flash a different gradient
-  // while it fades out over the galaxy.
+  const mode = screen === 'intro' ? introMode : bg.mode
   const warmVariant = useRef('quiet')
   if (bg.warm) warmVariant.current = bg.variant
 
+  // Chrome: language switcher on the calm/entry screens; hidden during the
+  // cinematic beats so nothing competes with the moment.
+  const showSwitcher = !['intro', 'sendoff', 'match', 'checkout'].includes(screen)
+
   return (
     <div className="still-app">
-      {/* persistent galaxy — one instance for the whole session */}
       <GalaxyCanvas
-        mode={bg.mode}
+        mode={mode}
         dim={bg.dim}
         origin={bg.origin}
         seals={sealCount}
@@ -219,28 +352,29 @@ export default function App() {
         onReady={(f) => (galaxyRef.current = f)}
         style={{ position: 'fixed', zIndex: 0 }}
       />
-      {/* subtle @ tags — one per sealed star — floating with them in the field */}
-      <StarTags fieldRef={galaxyRef} handles={handles} color={C.them} show={screen === 'sendoff' || screen === 'resting'} />
-      {/* warm gradient overlay — cross-fades in on the calm entry screens */}
+      <StarTags fieldRef={galaxyRef} handles={handles} color={C.them} show={(screen === 'sendoff' || screen === 'resting') && focused == null} />
       <div
         aria-hidden
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: bg.warm ? 1 : 0,
-          transition: 'opacity .6s ease',
-        }}
+        style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none', opacity: bg.warm ? 1 : 0, transition: 'opacity .6s ease' }}
       >
         <WarmBg C={C} variant={warmVariant.current} />
       </div>
 
+      {showSwitcher && (
+        <div style={{ position: 'fixed', top: 'max(12px, env(safe-area-inset-top))', right: 'max(12px, env(safe-area-inset-right))', zIndex: 20 }}>
+          <LanguageSwitcher C={C} lang={lang} langs={langs} onChange={setLang} />
+        </div>
+      )}
+
       <div key={screen} className="fade" data-screen={screen} style={{ position: 'relative', zIndex: 4 }}>
-        <Screen C={C} t={screenT} ctx={ctx} />
+        <Screen C={C} ctx={ctx} lang={lang} />
       </div>
 
-      {/* @ → star morph, on top of everything during the hand-off */}
+      {/* interactive field: the focused-star detail card */}
+      {focused != null && screen === 'resting' && (
+        <StarDetail C={C} lang={lang} info={starInfo(focused)} onRemove={() => removeStar(focused)} onClose={closeStar} />
+      )}
+
       {morph && <Liftoff C={C} handle={morph.handle} />}
     </div>
   )
