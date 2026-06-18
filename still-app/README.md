@@ -13,6 +13,32 @@ on a phone, and the same intimate column centered over the 3D starfield on the w
 > folder, and the `still-notify` function keep their original `still_*` names for
 > continuity with the live database — only the brand/UI is renamed.
 
+## What's new (galaxy edition v2)
+
+- **One color kit.** All color now derives from a single source of truth,
+  [`src/theme.js`](./src/theme.js) — the React UI, the canvas galaxy, and
+  `styles.css` all read it, so the whole product is one cosmic-violet world on
+  every screen (no more orange-loading vs. purple-galaxy clash). The inconsistent
+  "LISTENING" corner badge and the old "why it's free →" link are gone.
+- **All languages.** Browser-language auto-detection + a manual switcher
+  (top-right), with curated, fallback-safe translations in
+  [`src/i18n/`](./src/i18n). English is canonical; partial locales fall back
+  key-by-key. Add a language by dropping a partial dict into `strings.js`.
+- **Motion-graphic intro.** A short staged explainer for new users (replayable
+  via "how it works") ending in two stars colliding into one.
+- **Interactive resting field.** Tap any star → the camera drifts in and zooms;
+  a detail card shows its state (still waiting), the registry date, and a remove
+  action; close to zoom back out (`galaxy.js` `focusStar`/`hitTest`).
+- **`/demo`.** `dolbomi.app/demo` (and `…/demo`) runs with **zero verification
+  and zero paywall** — everything unlocked and free.
+- **Meta auth up front** (scaffold, [`src/api/auth.js`](./src/api/auth.js)),
+  **paywall** — first star free, pay to add more via Stripe / KakaoPay / TossPay
+  (scaffold, [`src/api/pay.js`](./src/api/pay.js) +
+  `supabase/functions/still-checkout`), and **@ search** typeahead (scaffold,
+  `searchHandles()` + `supabase/functions/still-search`). All three are behind
+  the `VITE_*` flags in [`.env.example`](./.env.example) and ship **off** by
+  default (safe local fallbacks) until their backends + keys are wired.
+
 ## Flow
 
 A short guided flow over an animated starfield (`src/galaxy.js`), built from the

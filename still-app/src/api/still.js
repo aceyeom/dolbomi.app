@@ -53,6 +53,30 @@ export async function withdrawStill({ me, ex }) {
   return data; // { withdrawn: boolean }
 }
 
+// ── @ SEARCH (Instagram-style typeahead) ──────────────────────────────────
+// Pluggable adapter. The client can NEVER hold a scraper key, and suggesting
+// from our own entered handles would leak who's been entered (privacy model) —
+// so by default this returns nothing and manual entry + validation carries the
+// flow. When a server-side provider is wired up (a Supabase Edge Function that
+// proxies a vetted Instagram search source), set VITE_HANDLE_SEARCH=1 and this
+// calls it. Swapping providers later is a change to that one edge function, not
+// to the app. See supabase/functions/still-search/.
+const SEARCH_ENABLED = import.meta.env.VITE_HANDLE_SEARCH === '1'
+
+export async function searchHandles(query) {
+  const q = normHandle(query)
+  if (q.length < 2) return []
+  if (!SEARCH_ENABLED || !hasSupabase) return [] // manual entry only until a provider is live
+  try {
+    const { data, error } = await supabase.functions.invoke('still-search', { body: { q } })
+    if (error) return []
+    // Expected shape: [{ handle, full_name, avatar, verified }]
+    return Array.isArray(data?.results) ? data.results.slice(0, 8) : []
+  } catch {
+    return []
+  }
+}
+
 // Public erasure / "never let me be entered" for a handle (§2.5).
 export async function suppressHandle(handle) {
   if (!hasSupabase) {
