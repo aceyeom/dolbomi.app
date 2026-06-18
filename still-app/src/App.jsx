@@ -69,18 +69,12 @@ export default function App() {
   const [session, setSession] = useState(getSession)
   const verified = !!session?.verified
 
-  // First screen: Meta gate up front unless demo or already signed in; then the
-  // motion-graphic intro for new users; then resume where they were.
-  const introSeen = useMemo(() => {
-    try {
-      return !!localStorage.getItem(INTRO_SEEN)
-    } catch {
-      return false
-    }
-  }, [])
+  // First screen: Meta gate up front unless demo or already signed in; then
+  // resume where they were. The explainer slideshow is no longer auto-shown —
+  // it now plays only when the user presses "Find out" (or replays it via
+  // "how it works"), so it never appears unbidden.
   const firstScreen = () => {
     if (!demo && !session) return 'auth'
-    if (!introSeen) return 'intro'
     return init.screen === 'sendoff' ? 'resting' : init.screen || 'landing'
   }
 
@@ -99,6 +93,9 @@ export default function App() {
   const [error, setError] = useState('')
   const [morph, setMorph] = useState(null)
   const [introMode, setIntroMode] = useState('idle') // galaxy mode while intro plays
+  // Where the slideshow hands off when it ends: 'you' when launched from
+  // "Find out" (straight into the flow), 'landing' when replayed from "how it works".
+  const [introNext, setIntroNext] = useState('you')
   const [focused, setFocused] = useState(null) // index of the star the camera holds
   const galaxyRef = useRef(null)
 
@@ -119,7 +116,7 @@ export default function App() {
         setSession(s)
         if (s.email && !email) setEmail(s.email)
         if (s.handle && !me) setMe(s.handle)
-        if (screen === 'auth') setScreen(introSeen ? 'landing' : 'intro')
+        if (screen === 'auth') setScreen('landing')
       }
     })
     return () => {
@@ -149,9 +146,9 @@ export default function App() {
       setSession(s)
       if (s.email) setEmail(s.email)
       if (s.handle) setMe(s.handle)
-      go(introSeen ? 'landing' : 'intro')
+      go('landing')
     }
-  }, [go, introSeen])
+  }, [go])
   const enterDemo = useCallback(() => {
     try {
       const base = window.location.pathname.replace(/\/+$/, '')
@@ -159,18 +156,29 @@ export default function App() {
     } catch {
       /* ignore */
     }
-    go(introSeen ? 'landing' : 'intro')
-  }, [go, introSeen])
+    go('landing')
+  }, [go])
 
   // ── intro ──
+  // "Find out" — the slideshow plays, then hands straight into the flow.
+  const findOut = useCallback(() => {
+    if (!over18) setOver18(true)
+    setIntroNext('you')
+    go('intro')
+  }, [over18, go])
+  // "how it works" — replay the slideshow, then return to the landing.
+  const watchIntro = useCallback(() => {
+    setIntroNext('landing')
+    go('intro')
+  }, [go])
   const finishIntro = useCallback(() => {
     try {
       localStorage.setItem(INTRO_SEEN, '1')
     } catch {
       /* ignore */
     }
-    go('landing')
-  }, [go])
+    go(introNext)
+  }, [go, introNext])
   const onIntroStep = useCallback((i) => {
     // the last two beats are the two stars colliding into one
     setIntroMode(i >= 3 ? 'match' : 'idle')
@@ -277,9 +285,18 @@ export default function App() {
   const removeStar = useCallback(
     async (i) => {
       const handle = handles[i]
+      // Play the wink-out where the star sits, and start drifting the camera back
+      // out, before the star is dropped from the set — so it's seen to vanish and
+      // the field returns to the resting overview.
+      const f = galaxyRef.current
+      if (f && f.vanishStar) f.vanishStar(i)
       setFocused(null)
+      // let the vanish animation finish, then remove the star and free its slot
+      await new Promise((r) => setTimeout(r, 460))
       setHandles((h) => h.filter((_, k) => k !== i))
       setSealTimes((s) => s.filter((_, k) => k !== i))
+      // Releasing a star frees its registration slot — index 0 is always free, so
+      // the person can always keep one star in the sky without paying (§ free star).
       setSealCount((n) => Math.max(0, n - 1))
       if (handle) {
         try {
@@ -324,9 +341,10 @@ export default function App() {
     email, me, them, sealedAt, over18, error, demo, verified, sealCount,
     setEmail, setMe, setThem, go, seal, checkAnother, startCheckout,
     withdrawLast, forget, affirmAge, suppressHandle, openConversation,
-    signIn, enterDemo, finishIntro, onIntroStep,
+    signIn, enterDemo, findOut, watchIntro, finishIntro, onIntroStep,
     onStarTap, closeStar, removeStar,
     canWithdraw: handles.length > 0,
+    zoomed: focused != null,
   }
   const Screen = SCREENS[screen] || SCREENS.landing
 

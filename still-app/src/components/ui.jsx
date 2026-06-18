@@ -172,18 +172,8 @@ export function Liftoff({ C, handle }) {
 
 export function Brandmark({ C, size = 14 }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: C.you,
-          boxShadow: `0 0 12px 2px ${rgba(C.you, 0.7)}`,
-          animation: 'breathe 4s ease-in-out infinite',
-        }}
-      />
-      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: size, letterSpacing: '5px', color: C.cream, paddingLeft: 2 }}>CELESTE</span>
+    <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: size, letterSpacing: '5px', color: C.cream }}>CELESTUAL</span>
     </div>
   )
 }
