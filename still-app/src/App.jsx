@@ -303,7 +303,11 @@ export default function App() {
       if (f && f.vanishStar) f.vanishStar(i)
       setFocused(null)
       // let the vanish animation finish, then remove the star and free its slot
-      await new Promise((r) => setTimeout(r, 460))
+      await new Promise((r) => setTimeout(r, 520))
+      // Drop the SAME slot on the canvas that we drop from the handle/time arrays,
+      // so every surviving star stays matched to its own @tag (the galaxy used to
+      // trim its tail here, which slid every later star onto the wrong tag).
+      if (f && f.removeSealAt) f.removeSealAt(i)
       setHandles((h) => h.filter((_, k) => k !== i))
       setSealTimes((s) => s.filter((_, k) => k !== i))
       // Releasing a star frees its registration slot — index 0 is always free, so

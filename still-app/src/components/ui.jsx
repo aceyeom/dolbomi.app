@@ -50,6 +50,9 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals
     f.setMode(mode, { dim, origin })
     f.start()
     if (onReady) onReady(f)
+    // Dev-only handle for visual/automated testing of the field (positions, focus,
+    // seal slots). Tree-shaken out of production builds via import.meta.env.DEV.
+    if (import.meta.env.DEV) window.__galaxyField = f
     let ro
     if (window.ResizeObserver && ref.current && ref.current.parentElement) {
       ro = new ResizeObserver(() => f.resize())
@@ -84,22 +87,39 @@ export function GalaxyCanvas({ mode = 'idle', dim, you, them, motion = 20, seals
 // (no React re-render churn). `handles` is aligned with the stars by index.
 export function StarTags({ fieldRef, handles, color, show }) {
   const refs = React.useRef([])
+  const widths = React.useRef([]) // cached tag widths (stable per handle) — avoid per-frame layout
   React.useEffect(() => {
+    widths.current = [] // handles changed → indices shifted, re-measure
     let raf
     const tick = () => {
       const f = fieldRef.current
       const arr = (f && f.sealedScreen) || []
+      const vw = window.innerWidth, vh = window.innerHeight
       for (let i = 0; i < refs.current.length; i++) {
         const el = refs.current[i]
         if (!el) continue
         const ps = arr[i]
         const on = show && !!handles[i] && ps && ps.vis
         el.style.opacity = on ? '1' : '0'
-        if (on) {
-          const x = clampN(ps.x + 14, 12, window.innerWidth - 12)
-          const y = clampN(ps.y - 26, 16, window.innerHeight - 16)
-          el.style.transform = `translate(${x}px, ${y}px)`
+        if (!on) continue
+        // Tag width is fixed for a given handle, so measure once and cache rather
+        // than forcing a layout read every animation frame.
+        let w = widths.current[i]
+        if (w == null) {
+          w = el.offsetWidth
+          if (w) widths.current[i] = w
         }
+        w = w || 84
+        // Anchor up-and-right of the star, but FLIP to the other side near an edge
+        // so the tag always hugs its own star instead of piling onto the viewport
+        // wall (where neighbouring tags would overlap and look mismatched).
+        let x = ps.x + 12
+        if (x + w > vw - 8) x = ps.x - 12 - w
+        x = clampN(x, 8, Math.max(8, vw - w - 8))
+        let y = ps.y - 24
+        if (y < 8) y = ps.y + 16
+        y = clampN(y, 8, vh - 28)
+        el.style.transform = `translate(${x}px, ${y}px)`
       }
       raf = requestAnimationFrame(tick)
     }
