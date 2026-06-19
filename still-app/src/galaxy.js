@@ -31,6 +31,52 @@ function makeGlow(color, size) {
   c.fillRect(0, 0, size, size)
   return s
 }
+// A single star as a round, anti-aliased sprite: a hot near-white core that
+// falls off through the star's own hue to a soft transparent edge. Drawn (scaled)
+// in place of 1px square quads, so the field reads as real points of light with
+// a faint bloom instead of a grid of pixels. One per hue, cached.
+function makeStarSprite(color, size) {
+  const s = document.createElement('canvas')
+  s.width = s.height = size
+  const c = s.getContext('2d')
+  const [r, g, b] = hexToRgb(color)
+  const m = size / 2
+  // pull the inner core toward white so even tinted stars burn white-hot at center
+  const wr = (r + 255 * 1.6) / 2.6, wg = (g + 255 * 1.6) / 2.6, wb = (b + 255 * 1.6) / 2.6
+  const grd = c.createRadialGradient(m, m, 0, m, m, m)
+  grd.addColorStop(0.0, 'rgba(255,255,255,1)')
+  grd.addColorStop(0.28, `rgba(${wr | 0},${wg | 0},${wb | 0},0.98)`)
+  grd.addColorStop(0.5, `rgba(${r},${g},${b},0.62)`)
+  grd.addColorStop(0.78, `rgba(${r},${g},${b},0.16)`)
+  grd.addColorStop(1.0, `rgba(${r},${g},${b},0)`)
+  c.fillStyle = grd
+  c.beginPath()
+  c.arc(m, m, m, 0, Math.PI * 2)
+  c.fill()
+  return s
+}
+// Four soft diffraction spikes (a slim cross that fades to nothing) — the
+// photographic signature of a bright star through a lens. Added, very faintly,
+// only to the few brightest stars so the field looks shot, not drawn.
+function makeSpikeSprite(color, size) {
+  const s = document.createElement('canvas')
+  s.width = s.height = size
+  const c = s.getContext('2d')
+  const [r, g, b] = hexToRgb(color)
+  const m = size / 2
+  for (const horiz of [true, false]) {
+    const g1 = horiz ? c.createLinearGradient(0, m, size, m) : c.createLinearGradient(m, 0, m, size)
+    g1.addColorStop(0, `rgba(${r},${g},${b},0)`)
+    g1.addColorStop(0.5, `rgba(255,255,255,0.9)`)
+    g1.addColorStop(1, `rgba(${r},${g},${b},0)`)
+    c.fillStyle = g1
+    // a hairline that tapers — drawn as a thin triangle-ish bar via a soft 2px line
+    const th = Math.max(1, size * 0.014)
+    if (horiz) c.fillRect(0, m - th, size, th * 2)
+    else c.fillRect(m - th, 0, th * 2, size)
+  }
+  return s
+}
 const easeOut = (p) => 1 - Math.pow(1 - p, 3)
 const easeInOut = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
 const smooth = (p) => p * p * (3 - 2 * p)
@@ -79,7 +125,12 @@ export class GalaxyField {
     this.p = { x: 0, y: 0 }
     this.glows = { you: makeGlow(this.you, 64), them: makeGlow(this.them, 64), warm: makeGlow('#FFE0C2', 64), white: makeGlow('#FFFFFF', 64) }
     this._glowCache = {}
-    const count = opts.count || (window.innerWidth < 540 ? 1500 : 2400)
+    this._dotCache = {} // hue -> round star sprite
+    this._spike = makeSpikeSprite('#FFFFFF', 64) // shared diffraction cross (white, tinted via alpha)
+    // Soft round sprites cost more per star than the old square quads, so the
+    // field is a touch leaner — it reads denser now (each star carries a glow), so
+    // fewer points still fill the frame.
+    const count = opts.count || (window.innerWidth < 540 ? 1150 : 1800)
     this._gen(count)
     this.trail = []
     this.motes = null
@@ -90,8 +141,11 @@ export class GalaxyField {
     // follow each one. [{ x, y, vis }, …], aligned with `sealed` by index.
     this.sealedScreen = []
     // Each sealed person becomes a persistent star resting in the disk; the set
-    // stacks across the session so "more people → more stars".
+    // stacks across the session so "more people → more stars". Slots carry a
+    // monotonic placement seed (never reused) so removing one from the middle
+    // leaves the others exactly where they were and never collides a later add.
     this.sealed = []
+    this._slotSeed = 0
     // Camera focus on a single star (the interactive resting field): the camera
     // drifts toward sealed[focusIndex] and zooms in; everything else recedes.
     this.focus = 0 // eased 0..1
@@ -109,6 +163,12 @@ export class GalaxyField {
   _glowFor(hex) {
     if (!this._glowCache[hex]) this._glowCache[hex] = makeGlow(hex, 64)
     return this._glowCache[hex]
+  }
+  // Round star sprite cache (one per hue) — the anti-aliased point of light that
+  // replaces the old square quads.
+  _dotFor(hex) {
+    if (!this._dotCache[hex]) this._dotCache[hex] = makeStarSprite(hex, 32)
+    return this._dotCache[hex]
   }
 
   _gen(n) {
@@ -186,7 +246,7 @@ export class GalaxyField {
 
     // Foreground dust — large volume, strong near-field parallax (kept, softened).
     this.dust = []
-    const dn = Math.floor(n * 0.42)
+    const dn = Math.floor(n * 0.22)
     for (let i = 0; i < dn; i++) {
       this.dust.push({
         px: (rnd() - 0.5) * 4.4,
@@ -221,7 +281,7 @@ export class GalaxyField {
     // Deep background starfield — screen-space, fills the whole frame so the scene
     // reads as a window into space, not a shape on black. Subtle parallax + twinkle.
     this.bg = []
-    const bn = window.innerWidth < 540 ? 240 : 440
+    const bn = window.innerWidth < 540 ? 200 : 340
     for (let i = 0; i < bn; i++) {
       this.bg.push({
         x: rnd(),
@@ -290,7 +350,7 @@ export class GalaxyField {
       if (data.origin) this.origin = data.origin
       if (changed) this.trail = []
     }
-    if (mode === 'resting') this.dimTarget = 0.3
+    if (mode === 'resting') this.dimTarget = 0.42
     if (mode === 'match') {
       this.dimTarget = 0.22
       if (changed) this.motes = null
@@ -366,22 +426,47 @@ export class GalaxyField {
     this.glows.them = makeGlow(them, 64)
   }
 
-  // Match the resting set to the number of people sealed. Growing is the common
-  // case (each seal adds a star); it can also shrink by one when a send-off
-  // fails and the app rolls the count back, so the failed star doesn't linger.
-  // Slots are a pure function of index, so trimming the tail is stable.
-  setSeals(n) {
-    while (this.sealed.length < n) {
-      const i = this.sealed.length
-      const ring = i % 3
-      this.sealed.push({
-        theta0: i * 2.39996323, // golden angle — even, non-repeating placement
-        r: 0.34 + ring * 0.15, // staggered radii so they sit at different depths
-        y: (i % 2 ? 1 : -1) * (0.045 + ring * 0.02), // above / below the plane
-        phase: i * 1.7, // desynced twinkle
-      })
+  // Place a fresh slot from a monotonic seed (never reused), so a star's spot in
+  // the disk is fixed for its whole life and a later add can't land on a slot a
+  // removed star used to hold.
+  _placeSlot(seed) {
+    const ring = seed % 3
+    return {
+      seed,
+      theta0: seed * 2.39996323, // golden angle — even, non-repeating placement
+      r: 0.34 + ring * 0.15, // staggered radii so they sit at different depths
+      y: (seed % 2 ? 1 : -1) * (0.045 + ring * 0.02), // above / below the plane
+      phase: seed * 1.7, // desynced twinkle
     }
+  }
+
+  // Match the resting set to the number of people sealed. Growing is the common
+  // case (each seal adds a star); shrinking from the TAIL covers a rolled-back
+  // send-off and a full reset (forget). Removing a specific star from the middle
+  // goes through removeSealAt so the survivors keep their exact places and stay
+  // index-aligned with the @handle tags.
+  setSeals(n) {
+    while (this.sealed.length < n) this.sealed.push(this._placeSlot(this._slotSeed++))
     if (this.sealed.length > n) this.sealed.length = Math.max(0, n)
+  }
+
+  // Remove the slot at index `i` (identity-stable): the survivors keep their own
+  // positions, and the focus/vanish indices follow the splice. This is what keeps
+  // each drifting star matched to the tag it's labelled with after a release.
+  removeSealAt(i) {
+    if (i == null || i < 0 || i >= this.sealed.length) return
+    this.sealed.splice(i, 1)
+    this.sealedScreen.splice(i, 1)
+    if (this.vanish) {
+      if (this.vanish.i === i) this.vanish = null
+      else if (this.vanish.i > i) this.vanish.i--
+    }
+    if (this.focusIndex === i) {
+      this.focusIndex = -1
+      this.focusTarget = 0
+    } else if (this.focusIndex > i) {
+      this.focusIndex--
+    }
   }
 
   // Rotate a local point into view space (spin → parallax yaw → tilt), then
@@ -463,11 +548,11 @@ export class GalaxyField {
     const ctx = this.ctx,
       d = this.dim,
       rot = this._rot()
-    // While the camera is zoomed into a star the whole field is scaled up, so
-    // the tiny crisp star/dust quads would magnify into visible squares. Draw
-    // them as round dots when zoomed (kept as fast fillRects otherwise) so a
-    // close-up reads as soft points of light, not pixels.
-    const round = this.focus > 0.01
+    // When zoomed, the whole field is magnified, so even tiny points must be drawn
+    // as round sprites or they'd smear into squares. Un-zoomed, the faint sub-pixel
+    // majority can take a cheap fill (they read as points either way) — that's what
+    // keeps the soft-sprite field affordable on low-end hardware.
+    const zoomed = this.focus > 0.01
 
     // deep-space backdrop with a faint cool zenith glow
     ctx.globalCompositeOperation = 'source-over'
@@ -512,37 +597,47 @@ export class GalaxyField {
     // nebula gas (additive, behind the stars)
     this._drawNebula(dt, d, rot)
 
-    // soft core glow (additive)
+    // soft core glow (additive) — a luminous, layered galactic bulge: a tight
+    // bright heart inside a broad warm halo, so the centre reads as a real core.
     ctx.globalCompositeOperation = 'lighter'
-    const coreR = this.unit * 0.52 * o.persp
+    const coreR = this.unit * 0.6 * o.persp
     const cg = ctx.createRadialGradient(o.sx, o.sy, 0, o.sx, o.sy, coreR)
-    cg.addColorStop(0, `rgba(255,214,176,${0.18 * d})`)
-    cg.addColorStop(0.4, `rgba(214,150,120,${0.06 * d})`)
+    cg.addColorStop(0, `rgba(255,236,206,${0.34 * d})`)
+    cg.addColorStop(0.16, `rgba(255,214,176,${0.2 * d})`)
+    cg.addColorStop(0.46, `rgba(214,150,120,${0.07 * d})`)
     cg.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = cg
     ctx.fillRect(0, 0, this.w, this.h)
 
-    // foreground dust (source-over, twinkling) — strong parallax
+    // diffuse disk haze — the milky glow of unresolved starlight smeared along the
+    // tilted plane. It's what makes the field read as one galaxy rather than a
+    // scatter of dots. Drawn additively as an ellipse aligned to the projected disk.
+    this._drawDiskHaze(d, rot, o)
+
+    // foreground dust (source-over, twinkling) — strong parallax. Soft round
+    // motes (a warm/cream sprite) rather than square specks.
     ctx.globalCompositeOperation = 'source-over'
+    const dustSprite = this._dotFor(PAL.cream), dustWarm = this._dotFor(PAL.warm)
     for (const p of this.dust) {
       const pr = this._project(p.px, p.py, p.pz, rot)
       if (!pr || pr.sx < -30 || pr.sx > this.w + 30 || pr.sy < -30 || pr.sy > this.h + 30) continue
       p.tw += dt * p.tws
       const a = p.base * (0.7 + 0.3 * Math.sin(p.tw)) * d * clamp(pr.shade, 0.3, 1.2)
       if (a <= 0.004) continue
-      ctx.globalAlpha = Math.min(0.6, a)
-      ctx.fillStyle = p.warm ? PAL.warm : PAL.cream
-      const s = p.rad * pr.persp
-      if (round) {
-        ctx.beginPath()
-        ctx.arc(pr.sx, pr.sy, s, 0, TWO)
-        ctx.fill()
+      ctx.globalAlpha = Math.min(0.55, a)
+      const D = Math.max(1.6, p.rad * pr.persp * 2.6)
+      if (zoomed) {
+        ctx.drawImage(p.warm ? dustWarm : dustSprite, pr.sx - D / 2, pr.sy - D / 2, D, D)
       } else {
+        // faint near-field mote — a cheap point un-zoomed
+        ctx.fillStyle = p.warm ? PAL.warm : PAL.cream
+        const s = D * 0.4
         ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
       }
     }
 
-    // arm/bulge/halo stars (crisp) + collect glow stars for the additive pass
+    // arm/bulge/halo stars (round, anti-aliased) + collect glow stars for the
+    // additive bloom/spike pass.
     const glowQ = []
     for (const st of this.stars) {
       const pr = this._project(st.px, st.py, st.pz, rot)
@@ -551,30 +646,74 @@ export class GalaxyField {
       const a = st.base * (0.7 + 0.3 * Math.sin(st.tw)) * d * pr.shade
       if (st.glow) glowQ.push([pr, st, a])
       if (a <= 0.004) continue
-      ctx.globalAlpha = Math.min(0.85, a)
-      ctx.fillStyle = st.hue
-      const s = Math.max(0.4, st.rad * pr.persp * 0.9)
-      if (round) {
-        ctx.beginPath()
-        ctx.arc(pr.sx, pr.sy, s, 0, TWO)
-        ctx.fill()
+      // a soft sprite spreads its light over more area than the old solid quad, so
+      // lift the alpha to keep the field reading bright and crisp, not washed thin.
+      ctx.globalAlpha = Math.min(0.96, a * 1.5)
+      // diameter: the bright core ≈ the old quad, plus a soft feathered halo so
+      // it reads as a point of light. A floor keeps the faintest stars visible.
+      const D = Math.max(1.9, st.rad * pr.persp * 3)
+      // The round sprite is what kills the pixelation, but it's only worth its cost
+      // on stars big or bright enough to actually read as a disc; the faint sub-2px
+      // crowd takes a cheap point fill (indistinguishable at that size, far cheaper).
+      if (zoomed || D >= 2.4 || a >= 0.34) {
+        ctx.drawImage(this._dotFor(st.hue), pr.sx - D / 2, pr.sy - D / 2, D, D)
       } else {
+        ctx.fillStyle = st.hue
+        const s = D * 0.42
         ctx.fillRect(pr.sx - s, pr.sy - s, s * 2, s * 2)
       }
     }
 
-    // glow pass (additive, small + few), each tinted to its star's hue
+    // glow pass (additive): a tinted bloom on every glow star, and on the very
+    // brightest a faint diffraction cross so the field looks photographed.
     ctx.globalCompositeOperation = 'lighter'
     for (const [pr, st, a] of glowQ) {
       const sz = st.rad * 7 * pr.persp
       ctx.globalAlpha = Math.min(0.55, a * 0.7)
       ctx.drawImage(this._glowFor(st.hue), pr.sx - sz / 2, pr.sy - sz / 2, sz, sz)
+      if (a > 0.5) {
+        const ss = sz * 2.6
+        ctx.globalAlpha = Math.min(0.22, (a - 0.5) * 0.32)
+        ctx.drawImage(this._spike, pr.sx - ss / 2, pr.sy - ss / 2, ss, ss)
+      }
     }
 
     this._drawHero(dt, rot)
     if (_focusSaved) ctx.restore()
     ctx.globalAlpha = 1
     ctx.globalCompositeOperation = 'source-over'
+  }
+
+  // Soft luminous disk: map a radial gradient onto the disk's projected ellipse
+  // by projecting its in-plane major (+x) and minor (+z) axes, so the haze tilts
+  // and spins with the galaxy. Additive + very faint, so it reads as glow, not fog.
+  _drawDiskHaze(d, rot, o) {
+    const ctx = this.ctx
+    const ax = this._project(1, 0, 0, rot)
+    const az = this._project(0, 0, 1, rot)
+    if (!ax || !az) return
+    const ux = ax.sx - o.sx, uy = ax.sy - o.sy
+    const vx = az.sx - o.sx, vy = az.sy - o.sy
+    // Gradient is defined in the unit-circle local space and reused every frame
+    // (only the transform below changes), so build it once. `d` is applied via
+    // globalAlpha rather than rebuilt stops — no per-frame allocation.
+    if (!this._hazeGrad) {
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
+      g.addColorStop(0, 'rgba(255,226,196,0.05)')
+      g.addColorStop(0.45, 'rgba(206,170,210,0.035)') // cool violet toward the rim
+      g.addColorStop(0.8, 'rgba(150,150,200,0.012)')
+      g.addColorStop(1, 'rgba(0,0,0,0)')
+      this._hazeGrad = g
+    }
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha = d
+    ctx.transform(ux, uy, vx, vy, o.sx, o.sy) // unit circle → disk ellipse
+    ctx.fillStyle = this._hazeGrad
+    ctx.beginPath()
+    ctx.arc(0, 0, 1, 0, TWO)
+    ctx.fill()
+    ctx.restore()
   }
 
   _drawBackground(dt, d) {
@@ -590,10 +729,18 @@ export class GalaxyField {
       if (x < -4 || x > this.w + 4 || y < -4 || y > this.h + 4) continue
       const a = b.base * (0.5 + 0.5 * Math.sin(b.tw)) * d
       if (a <= 0.01) continue
-      ctx.globalAlpha = Math.min(0.8, a)
-      ctx.fillStyle = b.hue
-      const s = b.rad
-      ctx.fillRect(x - s, y - s, s * 2, s * 2)
+      ctx.globalAlpha = Math.min(0.85, a)
+      // The deep backdrop sits behind the zoom transform, so it's never magnified —
+      // at 0.5–2px these read as points. A cheap fill (round for the few big ones,
+      // a fast 1px dot for the faint majority) keeps the frame light.
+      if (b.rad > 1.1) {
+        const D = b.rad * 2.4
+        ctx.drawImage(this._dotFor(b.hue), x - D / 2, y - D / 2, D, D)
+      } else {
+        ctx.fillStyle = b.hue
+        const s = b.rad
+        ctx.fillRect(x - s, y - s, s * 2, s * 2)
+      }
     }
   }
 
@@ -679,23 +826,18 @@ export class GalaxyField {
         this.sealedScreen[i] = { x: pr.sx, y: pr.sy, vis: false }
         continue
       }
-      const pulse = 0.78 + 0.22 * Math.sin(this.t * 1.3 + this.sealed[i].phase)
+      // a slow, shallow twinkle — a star settling, not a blinking indicator
+      const pulse = 0.84 + 0.16 * Math.sin(this.t * 0.9 + this.sealed[i].phase)
       const sh = clamp(pr.shade, 0.45, 1.2)
       const isFocus = focusing && i === this.focusIndex
-      // non-focused stars recede; the focused one brightens and grows a ring
-      const fade = focusing ? (isFocus ? 1 : 1 - 0.82 * this.focus) : 1
-      const core = Math.max(1.1, 1.9 * pr.persp) * (isFocus ? 1 + this.focus * 0.6 : 1)
-      this._star(pr.sx, pr.sy, 'you', core, 12 * pr.persp * pulse, 0.5 * pulse * sh * fade)
-      if (isFocus && this.focus > 0.12) {
-        const ctx = this.ctx
-        ctx.globalCompositeOperation = 'lighter'
-        ctx.strokeStyle = this._rgba(this.you, 0.5 * this.focus)
-        ctx.lineWidth = 1.2
-        ctx.beginPath()
-        ctx.arc(pr.sx, pr.sy, 9 + 3 * Math.sin(this.t * 2), 0, TWO)
-        ctx.stroke()
-        ctx.globalCompositeOperation = 'source-over'
-      }
+      // The focused star is the one we're flying toward — but the close-up's hero
+      // is the crisp DOM star in the readout, so this canvas point HANDS OFF: it
+      // dims out as we arrive (no two competing stars, no cheap pulsing ring).
+      // Every other star simply recedes into the depth-blurred field.
+      const handoff = 1 - smooth(clamp(this.focus * 1.7, 0, 1))
+      const fade = focusing ? (isFocus ? handoff : 1 - 0.82 * this.focus) : 1
+      const core = Math.max(1.1, 1.9 * pr.persp)
+      this._star(pr.sx, pr.sy, 'you', core * (focusing && isFocus ? handoff : 1), 12 * pr.persp * pulse, 0.5 * pulse * sh * fade)
       // each resting star carries its own tag — record where it is on screen
       this.sealedScreen[i] = { x: pr.sx, y: pr.sy, vis: true }
     }

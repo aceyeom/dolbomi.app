@@ -63,17 +63,34 @@ function FieldLabel({ C, children, optional }) {
   )
 }
 
-// The focal star for the close-up readout — layered amber/rose glow, expanding
-// sonar rings, a breathing white core. Built from the same tokens + keyframes as
-// the rest of the cosmos (no new colors), so the card belongs in the galaxy.
-function StarMark({ C }) {
+// The focal star for the close-up readout — THE single hero star of the zoomed
+// view (the canvas point hands off to this, so they never double up). A real
+// star, not a notification ping: a soft amber→rose aura, slim crossed diffraction
+// spikes, and a white core that only breathes in brightness (never scale-jumps,
+// which read as cheap). Built from the cosmos' own tokens — no new colors.
+function StarMark({ C, size = 92 }) {
+  const spike = (vertical) => ({
+    position: 'absolute',
+    [vertical ? 'height' : 'width']: '100%',
+    [vertical ? 'width' : 'height']: '1.5px',
+    background: `linear-gradient(${vertical ? 180 : 90}deg, transparent 8%, ${rgba(C.you, 0.55)} 40%, #fff 50%, ${rgba(C.you, 0.55)} 60%, transparent 92%)`,
+  })
   return (
-    <span style={{ position: 'relative', width: 76, height: 76, display: 'inline-grid', placeItems: 'center' }}>
-      <span aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.you, 0.34)}, ${rgba(C.them, 0.1)} 46%, transparent 70%)` }} />
-      {[0, 1].map((i) => (
-        <span key={i} aria-hidden style={{ position: 'absolute', width: 42, height: 42, borderRadius: '50%', border: `1px solid ${rgba(C.you, 0.5)}`, animation: `ping 3.2s ease-out ${i * 1.6}s infinite` }} />
-      ))}
-      <span style={{ width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: `0 0 18px 5px ${rgba(C.you, 0.8)}, 0 0 46px 16px ${rgba(C.you, 0.32)}`, animation: 'breathe 3s ease-in-out infinite' }} />
+    <span className="starmark" style={{ position: 'relative', width: size, height: size, display: 'inline-grid', placeItems: 'center' }}>
+      {/* outer aura — static, soft, amber folding into rose */}
+      <span aria-hidden style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.you, 0.32)} 0%, ${rgba(C.them, 0.12)} 40%, transparent 68%)` }} />
+      {/* inner halo — a tighter warm bloom right around the core */}
+      <span aria-hidden style={{ position: 'absolute', width: size * 0.42, height: size * 0.42, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.you, 0.5)}, transparent 70%)` }} />
+      {/* diffraction spikes — slim crossed light, breathing very slowly */}
+      <span aria-hidden className="starmark-spikes" style={{ position: 'absolute', width: '100%', height: '100%', placeItems: 'center', display: 'grid' }}>
+        <span style={{ ...spike(false), gridArea: '1 / 1' }} />
+        <span style={{ ...spike(true), gridArea: '1 / 1' }} />
+      </span>
+      {/* the core — a crisp white point with layered bloom, breathing in light */}
+      <span
+        className="starmark-core"
+        style={{ width: 11, height: 11, borderRadius: '50%', background: '#fff', boxShadow: `0 0 9px 2px #fff, 0 0 22px 6px ${rgba(C.you, 0.72)}, 0 0 52px 18px ${rgba(C.you, 0.26)}` }}
+      />
     </span>
   )
 }

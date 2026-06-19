@@ -107,6 +107,14 @@ button { font-family: inherit; }
 @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 .floaty { animation: floaty 6s ease-in-out infinite; }
 
+/* the close-up hero star — breathes in LIGHT, never in scale (a scale pulse on a
+   star reads as a cheap "ping"). The core dims a touch and the crossed spikes
+   shimmer, slowly and out of phase, the way a real star scintillates. */
+@keyframes starGlow   { 0%, 100% { opacity: 1; } 50% { opacity: 0.82; } }
+@keyframes spikeGlow  { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.82; transform: scale(1.05); } }
+.starmark-core   { animation: starGlow 4.5s ease-in-out infinite; }
+.starmark-spikes { animation: spikeGlow 6s ease-in-out infinite; transform-origin: center; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
   .enter, .fade { animation: none !important; opacity: 1 !important; }
