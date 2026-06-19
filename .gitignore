@@ -1,4 +1,4 @@
-# build output (root combined build → dolbomi.app/ and dolbomi.app/dolbomi)
+# build output (dolbomi-app → dist/, served at dolbomi.app/)
 dist
 node_modules
 

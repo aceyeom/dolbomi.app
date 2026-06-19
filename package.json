@@ -2,12 +2,10 @@
   "name": "dolbomi-app-monorepo",
   "private": true,
   "version": "1.0.0",
-  "description": "STILL. (live at dolbomi.app/) + archived DOLBOMI (at dolbomi.app/dolbomi), one Vercel build.",
+  "description": "DOLBOMI — 군인 자기개발 앱. A Vite + React SPA on Supabase, live at dolbomi.app/.",
   "scripts": {
-    "dev": "npm --prefix still-app run dev",
-    "dev:dolbomi": "npm --prefix archive/dolbomi-app run dev",
-    "build:still": "npm --prefix still-app install && npm --prefix still-app run build",
-    "build:dolbomi": "npm --prefix archive/dolbomi-app install && npm --prefix archive/dolbomi-app run build -- --base=/dolbomi/ --outDir ../../dist/dolbomi --emptyOutDir",
-    "build": "npm run build:still && npm run build:dolbomi"
+    "dev": "npm --prefix dolbomi-app run dev",
+    "build": "npm --prefix dolbomi-app install && npm --prefix dolbomi-app run build -- --outDir ../dist --emptyOutDir",
+    "gen:seed": "npm --prefix dolbomi-app run gen:seed"
   }
 }

@@ -64,7 +64,6 @@ data.questPool.forEach((p) => {
 });
 out.push('');
 
-// dolbomi-app + scripts now live under archive/, but the Supabase seed stays at
-// the repo-root supabase/ (shared with the live project), so step up one level.
-writeFileSync(join(root, '..', 'supabase/seed.sql'), out.join('\n'));
+// The Supabase seed lives at the repo-root supabase/.
+writeFileSync(join(root, 'supabase/seed.sql'), out.join('\n'));
 console.log(`✓ wrote supabase/seed.sql (${out.length} lines)`);
