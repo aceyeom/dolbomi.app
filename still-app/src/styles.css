@@ -75,6 +75,38 @@ button { font-family: inherit; }
 .morph-star { animation: morphStar 1.2s  cubic-bezier(.3, .2, .2, 1) both; }
 .morph-halo { animation: morphHalo 1.2s  ease-out both; }
 
+/* ── star-chart readout (the focused-star close-up) ───────────────────────────
+   A frameless reading that settles into place: the scrim deepens, the lines
+   ease up and unblur. No bottom-sheet slide, no card chrome. */
+@keyframes scrimIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes readoutIn {
+  0%   { opacity: 0; transform: translateY(10px) scale(.985); filter: blur(3px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes readoutLine {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ruleGrow { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes starRise {
+  from { opacity: 0; transform: translateY(12px) scale(.6); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes readoutOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(6px) scale(.99); }
+}
+@keyframes scrimOut { from { opacity: 1; } to { opacity: 0; } }
+.scrim-in   { animation: scrimIn .55s ease both; }
+.scrim-out  { animation: scrimOut .22s ease both; }
+.readout-in { animation: readoutIn .62s cubic-bezier(.2,.7,.2,1) both; }
+.readout-out { animation: readoutOut .22s ease both; }
+
+/* soft, slow drift for the "your sky is clear" empty-state mark */
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.floaty { animation: floaty 6s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
   .enter, .fade { animation: none !important; opacity: 1 !important; }

@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { submitStill, withdrawStill, suppressHandle, normHandle, isValidHandle } from './api/still.js'
 import { getSession, signInWithMeta, resumeSession } from './api/auth.js'
-import { canSealIndex, startCheckout as payStart } from './api/pay.js'
+import { canSealIndex, grantUnlocked, startCheckout as payStart } from './api/pay.js'
 import { makeColors, PALETTE } from './theme.js'
 import { GalaxyCanvas, WarmBg, StarTags, Liftoff, LanguageSwitcher } from './components/ui.jsx'
 import {
-  AuthScreen, IntroScreen, LandingScreen, YouScreen, ThemScreen, SendoffScreen,
+  IntroScreen, LandingScreen, YouScreen, ThemScreen, SendoffScreen,
   RestingScreen, MatchScreen, PricingScreen, CheckoutScreen, PrivacyScreen, StarDetail,
 } from './components/screens.jsx'
 import { useI18n } from './i18n/index.js'
@@ -13,7 +13,6 @@ import { useI18n } from './i18n/index.js'
 const MOTION = 20
 
 const SCREENS = {
-  auth: AuthScreen,
   intro: IntroScreen,
   landing: LandingScreen,
   you: YouScreen,
@@ -35,7 +34,6 @@ const SENDOFF_ORIGIN = { x: 0.5, y: 0.43 }
 // One persistent background for the whole session. Each screen declares the
 // galaxy mode + whether the calm overlay fades in on top.
 const BG = {
-  auth: { warm: true, variant: 'quiet', mode: 'idle' },
   landing: { warm: false, mode: 'idle', dim: 0.62 },
   you: { warm: true, variant: 'quiet', mode: 'idle' },
   them: { warm: true, variant: 'low', mode: 'idle' },
@@ -65,18 +63,15 @@ export default function App() {
     }
   }, [])
 
-  const [demo] = useState(isDemoPath)
+  const [demo, setDemo] = useState(isDemoPath)
   const [session, setSession] = useState(getSession)
   const verified = !!session?.verified
 
-  // First screen: Meta gate up front unless demo or already signed in; then
-  // resume where they were. The explainer slideshow is no longer auto-shown —
-  // it now plays only when the user presses "Find out" (or replays it via
-  // "how it works"), so it never appears unbidden.
-  const firstScreen = () => {
-    if (!demo && !session) return 'auth'
-    return init.screen === 'sendoff' ? 'resting' : init.screen || 'landing'
-  }
+  // First screen: the landing hook — there's no sign-in wall anymore (identity is
+  // confirmed at seal time). If they were mid-flow, resume there; a half-finished
+  // send-off resolves to the resting sky. The explainer slideshow only plays on
+  // "Find out" (or a replay via "how it works"), so it never appears unbidden.
+  const firstScreen = () => (init.screen === 'sendoff' ? 'resting' : init.screen || 'landing')
 
   const [screen, setScreen] = useState(firstScreen)
   const [email, setEmail] = useState(init.email || session?.email || '')
@@ -108,7 +103,9 @@ export default function App() {
     }
   }, [screen, email, me, sealedAt, over18, sealCount, sealTimes])
 
-  // Capture a returning Meta OAuth session on load.
+  // Capture a returning OAuth session on load (the popup-blocked redirect
+  // fallback path) — adopt it so the app resumes signed in. No navigation: people
+  // pick up wherever they were; the seal-time gate sees them as verified.
   useEffect(() => {
     let live = true
     resumeSession().then((s) => {
@@ -116,11 +113,30 @@ export default function App() {
         setSession(s)
         if (s.email && !email) setEmail(s.email)
         if (s.handle && !me) setMe(s.handle)
-        if (screen === 'auth') setScreen('landing')
       }
     })
     return () => {
       live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Returning from hosted checkout: Stripe/Kakao/Toss send the browser back to
+  // `…?paid=1` on success. Grant the credit, clean the URL, and drop them onto
+  // the entry to seal the star they were adding. (For production hardening, a
+  // provider webhook should be the source of truth — see SETUP-AUTH-AND-PAYMENTS.md.)
+  useEffect(() => {
+    try {
+      const u = new URL(window.location.href)
+      if (u.searchParams.get('paid') === '1') {
+        grantUnlocked(1)
+        u.searchParams.delete('paid')
+        window.history.replaceState({}, '', u.pathname + u.search + u.hash)
+        setThem('')
+        setScreen('them')
+      }
+    } catch {
+      /* ignore */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -139,16 +155,7 @@ export default function App() {
     requestAnimationFrame(() => window.scrollTo(0, 0))
   }, [])
 
-  // ── auth ──
-  const signIn = useCallback(async () => {
-    const s = await signInWithMeta() // null = redirect handoff; resumeSession resolves it
-    if (s) {
-      setSession(s)
-      if (s.email) setEmail(s.email)
-      if (s.handle) setMe(s.handle)
-      go('landing')
-    }
-  }, [go])
+  // ── demo ──
   const enterDemo = useCallback(() => {
     try {
       const base = window.location.pathname.replace(/\/+$/, '')
@@ -156,6 +163,7 @@ export default function App() {
     } catch {
       /* ignore */
     }
+    setDemo(true) // take effect this session (no reload) — bypasses sign-in + paywall
     go('landing')
   }, [go])
 
@@ -200,6 +208,25 @@ export default function App() {
       go('checkout')
       return
     }
+    // Confirm it's really you — at the moment of sealing, with Instagram. The
+    // real provider opens a popup (this keeps the in-memory entry alive); the dev
+    // stub resolves instantly. /demo and already-verified users skip it. This must
+    // stay the first await after the click so the popup isn't blocked.
+    if (!verified && !demo) {
+      let s = null
+      try {
+        s = await signInWithMeta()
+      } catch {
+        s = null
+      }
+      if (!s) {
+        setError(t('them.authCancelled'))
+        return
+      }
+      setSession(s)
+      if (s.email && !email) setEmail(s.email)
+      if (s.handle) setMe(s.handle)
+    }
     const now = Date.now()
     setSealedAt(now)
     setSealCount((n) => n + 1)
@@ -237,7 +264,7 @@ export default function App() {
       setError(t('them.errGeneric'))
       go('them')
     }
-  }, [me, them, email, sealCount, demo, go, t])
+  }, [me, them, email, sealCount, demo, verified, go, t])
 
   // Multi-entry: gate the paywall here too (entering "more users"). First is free.
   const checkAnother = useCallback(() => {
@@ -257,22 +284,6 @@ export default function App() {
       go('them')
     }
   }, [go])
-
-  const withdrawLast = useCallback(async () => {
-    const last = handles[handles.length - 1]
-    setHandles((h) => h.slice(0, -1))
-    setSealTimes((s) => s.slice(0, -1))
-    setSealCount((n) => Math.max(0, n - 1))
-    if (last) {
-      try {
-        await withdrawStill({ me, ex: last })
-      } catch (e) {
-        console.error(e)
-      }
-    }
-    setThem('')
-    go('you')
-  }, [handles, me, go])
 
   // Interactive field: tap → focus, remove → withdraw that star, close → zoom out.
   const onStarTap = useCallback((x, y) => {
@@ -298,6 +309,10 @@ export default function App() {
       // Releasing a star frees its registration slot — index 0 is always free, so
       // the person can always keep one star in the sky without paying (§ free star).
       setSealCount((n) => Math.max(0, n - 1))
+      // Clear the last-entered handle so nothing stale (a ghost "@…") survives the
+      // release; if this was the last star, the resting sky shows its empty state.
+      setThem('')
+      setError('')
       if (handle) {
         try {
           await withdrawStill({ me, ex: handle })
@@ -340,10 +355,10 @@ export default function App() {
   const ctx = {
     email, me, them, sealedAt, over18, error, demo, verified, sealCount,
     setEmail, setMe, setThem, go, seal, checkAnother, startCheckout,
-    withdrawLast, forget, affirmAge, suppressHandle, openConversation,
-    signIn, enterDemo, findOut, watchIntro, finishIntro, onIntroStep,
+    forget, affirmAge, suppressHandle, openConversation,
+    enterDemo, findOut, watchIntro, finishIntro, onIntroStep,
     onStarTap, closeStar, removeStar,
-    canWithdraw: handles.length > 0,
+    starCount: handles.length,
     zoomed: focused != null,
   }
   const Screen = SCREENS[screen] || SCREENS.landing

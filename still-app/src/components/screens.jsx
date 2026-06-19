@@ -11,7 +11,7 @@ import { normHandle } from '../api/still.js'
 import { useI18n } from '../i18n/index.js'
 import { PRICE_LABEL } from '../api/pay.js'
 import {
-  Brandmark, PrimaryButton, GhostButton, Field, HandleChip, HandleSearchField,
+  Brandmark, PrimaryButton, GhostButton, OutlineButton, Field, HandleChip, HandleSearchField,
   StepDots, BackBtn, Icon, Sonar, rgba,
 } from './ui.jsx'
 
@@ -39,43 +39,56 @@ function ShellInner({ children, onBackdropTap }) {
 const GalaxyShell = ({ children, onBackdropTap }) => <ShellInner onBackdropTap={onBackdropTap}>{children}</ShellInner>
 const WarmShell = ({ children }) => <ShellInner>{children}</ShellInner>
 
-// ── 0 · AUTH (Meta gate — up front, except on /demo) ──────────────────────────
-export function AuthScreen({ C, ctx }) {
-  const { t } = useI18n()
-  const [busy, setBusy] = React.useState(false)
-  const signIn = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      await ctx.signIn()
-    } catch (e) {
-      console.error(e)
-      setBusy(false)
-    }
-  }
+// ── shared field furniture (keeps YOU / THEM visually identical) ───────────────
+// A quiet hint line that sits under a field.
+function Hint({ C, icon, color, children }) {
   return (
-    <WarmShell>
-      <div className="enter" style={{ display: 'flex', justifyContent: 'center' }}>
-        <Brandmark C={C} />
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 22, textAlign: 'center' }}>
-        <h1 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontWeight: 400, fontSize: 'clamp(28px, 8vw, 40px)', lineHeight: 1.16, color: C.cream }}>
-          {t('auth.title')}
-        </h1>
-        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14.5, lineHeight: 1.6, color: C.muted }}>
-          {t('auth.sub')}
-        </p>
-      </div>
-      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <PrimaryButton C={C} onClick={signIn} disabled={busy}>
-          {t('auth.cta')}
-        </PrimaryButton>
-        <p style={{ margin: 0, textAlign: 'center', fontSize: 11.5, lineHeight: 1.5, color: C.muted }}>{t('auth.why')}</p>
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-          <GhostButton C={C} onClick={() => ctx.enterDemo()}>{t('auth.demo')}</GhostButton>
-        </div>
-      </div>
-    </WarmShell>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, color: C.muted, fontSize: 12, lineHeight: 1.5, padding: '0 2px' }}>
+      {icon && <span style={{ marginTop: 1, flexShrink: 0 }}><Icon name={icon} size={13} color={color || C.muted} /></span>}
+      <span>{children}</span>
+    </div>
+  )
+}
+
+// A small mono section label, with an optional "optional" pill so required vs.
+// optional reads at a glance (handle = no pill; email = pill).
+function FieldLabel({ C, children, optional }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 2px' }}>
+      <span style={{ fontSize: 11, letterSpacing: '1.5px', fontFamily: "'Space Mono', monospace", color: C.muted, textTransform: 'uppercase' }}>{children}</span>
+      {optional && (
+        <span style={{ fontSize: 9.5, letterSpacing: '.6px', fontFamily: "'Space Mono', monospace", color: rgba(C.you, 0.92), background: rgba(C.you, 0.1), border: `1px solid ${rgba(C.you, 0.28)}`, borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase' }}>{optional}</span>
+      )}
+    </div>
+  )
+}
+
+// The focal star for the close-up readout — layered amber/rose glow, expanding
+// sonar rings, a breathing white core. Built from the same tokens + keyframes as
+// the rest of the cosmos (no new colors), so the card belongs in the galaxy.
+function StarMark({ C }) {
+  return (
+    <span style={{ position: 'relative', width: 76, height: 76, display: 'inline-grid', placeItems: 'center' }}>
+      <span aria-hidden style={{ position: 'absolute', inset: -16, borderRadius: '50%', background: `radial-gradient(circle, ${rgba(C.you, 0.34)}, ${rgba(C.them, 0.1)} 46%, transparent 70%)` }} />
+      {[0, 1].map((i) => (
+        <span key={i} aria-hidden style={{ position: 'absolute', width: 42, height: 42, borderRadius: '50%', border: `1px solid ${rgba(C.you, 0.5)}`, animation: `ping 3.2s ease-out ${i * 1.6}s infinite` }} />
+      ))}
+      <span style={{ width: 13, height: 13, borderRadius: '50%', background: '#fff', boxShadow: `0 0 18px 5px ${rgba(C.you, 0.8)}, 0 0 46px 16px ${rgba(C.you, 0.32)}`, animation: 'breathe 3s ease-in-out infinite' }} />
+    </span>
+  )
+}
+
+// A hairline rule that fades at both ends and grows from its center on entrance.
+function Rule({ C, delay = 0 }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        height: 1, width: '76%', maxWidth: 230, margin: '0 auto',
+        background: `linear-gradient(90deg, transparent, ${rgba(C.cream, 0.16)}, transparent)`,
+        transformOrigin: 'center', animation: `ruleGrow .6s ease ${delay}s both`,
+      }}
+    />
   )
 }
 
@@ -178,18 +191,25 @@ export function LandingScreen({ C, t: screenT, ctx }) {
           </button>
           .
         </p>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GhostButton C={C} onClick={() => ctx.enterDemo()} style={{ padding: '2px 6px', fontSize: 11, color: C.muted }}>
+            {t('landing.demo')}
+          </GhostButton>
+        </div>
       </div>
     </GalaxyShell>
   )
 }
 
-// ── 2 · YOU ───────────────────────────────────────────────────
+// ── 2 · YOU (your side — handle is who you are; email is optional) ─────────────
 export function YouScreen({ C, ctx }) {
   const { t } = useI18n()
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ctx.email.trim())
+  const emailVal = ctx.email.trim()
+  // Email is optional now — valid if empty, or if it's a real-looking address.
+  const emailOk = emailVal === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)
   const handleOk = ctx.me.trim().length >= 2
-  // If verified via Meta, email is optional (we can reach them in-app).
-  const valid = handleOk && (ctx.verified || emailOk)
+  const valid = handleOk && emailOk
+  const submit = () => valid && ctx.go('them')
   return (
     <WarmShell>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -198,82 +218,69 @@ export function YouScreen({ C, ctx }) {
         <div style={{ width: 38 }} />
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 26 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 }}>
         <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(32px, 8vw, 37px)', lineHeight: 1.12, color: C.cream }}>
           {t('you.title1')}<br />
           <em style={{ color: C.you }}>{t('you.title2')}</em>
         </h2>
 
-        <div className="enter" style={{ animationDelay: '.08s', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Field
-            C={C}
-            kind="email"
-            value={ctx.email}
-            onChange={ctx.setEmail}
-            placeholder={t('you.email')}
-            accent={C.you}
-            autoFocus={!ctx.verified}
-            emphasis
-            onEnter={() => {
-              const el = document.querySelector('input[data-handle]')
-              if (el) el.focus()
-            }}
-          />
-          {ctx.verified && (
-            <div style={{ fontSize: 11.5, color: C.muted, padding: '0 4px' }}>{t('auth.notifyOff')}</div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 4px' }}>
-            <span style={{ height: 1, flex: 1, background: C.line }} />
-            <span style={{ fontSize: 11, color: C.muted, letterSpacing: '1px', fontFamily: "'Space Mono', monospace" }}>{t('you.and')}</span>
-            <span style={{ height: 1, flex: 1, background: C.line }} />
-          </div>
-          <HandleFieldTagged C={C} value={ctx.me} onChange={ctx.setMe} placeholder={t('you.handle')} onEnter={() => valid && ctx.go('them')} />
+        {/* handle — the primary field (this is your star) */}
+        <div className="enter" style={{ animationDelay: '.08s', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <Field C={C} kind="handle" value={ctx.me} onChange={ctx.setMe} placeholder={t('you.handle')} accent={C.you} autoFocus emphasis onEnter={submit} />
+          <Hint C={C} icon="instagram">{t('you.handleNote')}</Hint>
         </div>
 
-        <div className="enter" style={{ animationDelay: '.14s', display: 'flex', alignItems: 'flex-start', gap: 7, color: C.muted, fontSize: 12, padding: '0 2px' }}>
-          <Icon name="mail" size={14} color={C.muted} />
-          <span>{t('you.note')}</span>
+        {/* email — optional, clearly marked */}
+        <div className="enter" style={{ animationDelay: '.14s', display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <FieldLabel C={C} optional={t('you.emailOptional')}>{t('you.emailLabel')}</FieldLabel>
+          <Field C={C} kind="email" value={ctx.email} onChange={ctx.setEmail} placeholder={t('you.email')} accent={C.you} onEnter={submit} />
+          <Hint C={C} icon="mail">{t('you.note')}</Hint>
         </div>
       </div>
 
-      <PrimaryButton C={C} disabled={!valid} onClick={() => ctx.go('them')}>
+      <PrimaryButton C={C} disabled={!valid} onClick={submit}>
         {t('you.continue')}
       </PrimaryButton>
     </WarmShell>
   )
 }
-function HandleFieldTagged({ C, value, onChange, placeholder, onEnter }) {
-  const ref = React.useRef(null)
-  React.useEffect(() => {
-    if (ref.current) {
-      const inp = ref.current.querySelector('input')
-      if (inp) inp.setAttribute('data-handle', '1')
-    }
-  }, [])
-  return (
-    <div ref={ref}>
-      <Field C={C} kind="handle" value={value} onChange={onChange} placeholder={placeholder} accent={C.you} onEnter={onEnter} />
-    </div>
-  )
-}
 
-// ── 3 · THEM (with @ search typeahead) ────────────────────────
+// ── 3 · THEM (with @ search typeahead; identity confirmed at seal) ─────────────
 export function ThemScreen({ C, ctx }) {
   const { t } = useI18n()
   const valid = ctx.them.trim().length >= 2 && ctx.them.trim() !== ctx.me.trim()
   const [confirming, setConfirming] = React.useState(false)
+  const [busy, setBusy] = React.useState(false)
+  // First star (or /demo) needs no sign-in; otherwise we confirm it's you at seal.
+  const needsAuth = !ctx.verified && !ctx.demo
   const normd = normHandle(ctx.them)
-  const onSeal = () => {
-    if (!valid) return
+  const onSeal = async () => {
+    if (!valid || busy) return
     if (!confirming) {
       setConfirming(true)
       return
     }
-    ctx.seal()
+    setBusy(true)
+    try {
+      await ctx.seal() // opens the Instagram popup synchronously inside this gesture
+    } finally {
+      setBusy(false)
+    }
   }
   React.useEffect(() => {
     setConfirming(false)
   }, [ctx.them])
+
+  const sealLabel = busy
+    ? needsAuth
+      ? t('auth.signingIn')
+      : '…'
+    : confirming
+      ? needsAuth
+        ? t('them.sealAuth')
+        : t('them.sealYes')
+      : t('them.seal')
+  const sealIcon = confirming && needsAuth ? 'instagram' : 'lock'
 
   return (
     <WarmShell>
@@ -288,30 +295,29 @@ export function ThemScreen({ C, ctx }) {
           {t('them.title1')}<br />
           <em style={{ color: C.them }}>{t('them.title2')}</em>
         </h2>
-        <div className="enter" style={{ animationDelay: '.08s' }}>
+        <div className="enter" style={{ animationDelay: '.08s', display: 'flex', flexDirection: 'column', gap: 11 }}>
           <HandleSearchField C={C} value={ctx.them} onChange={ctx.setThem} placeholder={t('them.handle')} accent={C.them} autoFocus onEnter={onSeal} />
-          {/* The note and the confirm prompt share this line, crossfading in
-              place — the confirmation is woven into the same quiet copy slot
-              instead of popping a bordered box on top of the layout. */}
+          {/* The note and the confirm prompt share this slot, crossfading in
+              place — no bordered box popping over the layout. */}
           {confirming && valid ? (
-            <div key="confirm" className="fade" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 7px', marginTop: 14, color: C.muted, fontSize: 13, lineHeight: 1.5 }}>
+            <div key="confirm" className="fade" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 7px', color: C.muted, fontSize: 13, lineHeight: 1.5, padding: '0 2px' }}>
               <Icon name="lock" size={13} color={rgba(C.them, 0.85)} />
               <span>{t('them.confirm1')}</span>
               <HandleChip C={C} handle={normd} color={C.them} />
               <span>{t('them.confirm2')}</span>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 14, color: C.muted, fontSize: 12 }}>
-              <Icon name="eye" size={13} color={C.muted} /> {t('them.note')}
-            </div>
+            <Hint C={C} icon="eye">{t('them.note')}</Hint>
           )}
-          {ctx.error && <div style={{ marginTop: 12, color: C.them, fontSize: 13 }}>{ctx.error}</div>}
+          {/* sign-in expectation, set before they commit (not on /demo or once verified) */}
+          {needsAuth && !confirming && <Hint C={C} icon="instagram" color={rgba(C.you, 0.85)}>{t('them.authNote')}</Hint>}
+          {ctx.error && <div style={{ color: C.them, fontSize: 13, padding: '0 2px' }}>{ctx.error}</div>}
         </div>
       </div>
 
-      <PrimaryButton C={C} disabled={!valid} onClick={onSeal}>
+      <PrimaryButton C={C} disabled={!valid || busy} onClick={onSeal}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, justifyContent: 'center' }}>
-          <Icon name="lock" size={16} color="#1a0f0a" stroke={2} /> {confirming ? t('them.sealYes') : t('them.seal')}
+          {!busy && <Icon name={sealIcon} size={16} color="#1a0f0a" stroke={2} />} {sealLabel}
         </span>
       </PrimaryButton>
     </WarmShell>
@@ -338,18 +344,54 @@ export function SendoffScreen({ C }) {
   )
 }
 
-// ── 5 · RESTING (interactive field — tap a star to look closer) ────────────
+// ── 5 · RESTING (your sky — the home for every star you've sent) ───────────────
 export function RestingScreen({ C, ctx }) {
   const { t } = useI18n()
   const zoomed = ctx.zoomed
-  // Tap anywhere on the field: if it lands on a star, the camera drifts in.
+  const hasStars = ctx.starCount > 0
+
+  // EMPTY — nothing in the sky right now (first visit, or every star released).
+  // A single, calm invitation; no stale handle, no orphan controls.
+  if (!hasStars) {
+    return (
+      <GalaxyShell>
+        <div className="enter" style={{ display: 'flex', justifyContent: 'center' }}>
+          <Brandmark C={C} size={13} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20 }}>
+          <div className="floaty" style={{ marginBottom: 2 }}>
+            <StarMark C={C} />
+          </div>
+          <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(28px, 7vw, 36px)', lineHeight: 1.14, color: C.cream }}>
+            {t('resting.emptyTitle')}
+          </h2>
+          <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14, lineHeight: 1.6, color: C.muted, maxWidth: 300 }}>
+            {t('resting.emptyBody')}
+          </p>
+        </div>
+        <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <PrimaryButton C={C} onClick={() => ctx.checkAnother()}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, justifyContent: 'center' }}>
+              <Icon name="plus" size={16} color="#1a0f0a" stroke={2.1} /> {t('resting.emptyCta')}
+            </span>
+          </PrimaryButton>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <GhostButton C={C} onClick={() => ctx.forget()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
+              {t('resting.forget')}
+            </GhostButton>
+          </div>
+        </div>
+      </GalaxyShell>
+    )
+  }
+
+  // HAS STARS — the living sky. Tap anywhere: if it lands on a star, the camera
+  // drifts in. While zoomed, this whole layer fades out (and stops catching taps)
+  // so it never sits over the close-up readout.
   const onBackdropTap = (e) => {
     if (e.target.closest('button, a, input')) return // don't hijack controls
     ctx.onStarTap(e.clientX, e.clientY)
   }
-  // When the camera drifts into a star, the whole "It's out there" layer fades
-  // away (and stops catching taps) so it never sits over the close-up or the
-  // star's card; it eases back in when the camera pulls out.
   const veil = {
     opacity: zoomed ? 0 : 1,
     transform: zoomed ? 'translateY(8px)' : 'none',
@@ -358,100 +400,114 @@ export function RestingScreen({ C, ctx }) {
   }
   return (
     <GalaxyShell onBackdropTap={zoomed ? undefined : onBackdropTap}>
-      <div className="enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', ...veil }}>
+      <div className="enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, ...veil }}>
         <Brandmark C={C} size={13} />
+        <span style={{ fontSize: 11.5, color: C.muted, fontFamily: "'Space Mono', monospace", letterSpacing: '.4px' }}>
+          {t('resting.count', { n: ctx.starCount })}
+        </span>
       </div>
 
       <div style={{ flex: 1, minHeight: 150 }} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, ...veil }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 13, ...veil }}>
         <h2 className="enter" style={{ margin: 0, fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(30px, 7vw, 38px)', lineHeight: 1.14, color: C.cream }}>
           {t('resting.title')}
         </h2>
-        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 14, lineHeight: 1.55, color: C.muted, maxWidth: 320 }}>
-          {t('resting.body1')}{' '}
-          <HandleChip C={C} handle={ctx.them || 'them'} color={C.them} /> {t('resting.body2')}
+        <p className="enter" style={{ animationDelay: '.06s', margin: 0, fontSize: 13.5, lineHeight: 1.6, color: C.muted, maxWidth: 330 }}>
+          {t('resting.body')}
         </p>
-        {ctx.sealCount > 0 && (
-          <span style={{ fontSize: 11.5, color: C.muted, fontFamily: "'Space Mono', monospace", letterSpacing: '.3px' }}>
-            ✦ {t('resting.tapHint')}
-          </span>
-        )}
+        <span style={{ fontSize: 11.5, color: C.muted, fontFamily: "'Space Mono', monospace", letterSpacing: '.3px' }}>
+          ✦ {t('resting.tapHint')}
+        </span>
       </div>
 
-      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 28, ...veil }}>
-        <GhostButton C={C} onClick={() => ctx.checkAnother()}>
-          {t('resting.another')}
+      <div className="enter" style={{ animationDelay: '.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginTop: 28, ...veil }}>
+        <OutlineButton C={C} onClick={() => ctx.checkAnother()}>
+          <Icon name="plus" size={15} color={C.cream} stroke={2} /> {t('resting.another')}
+        </OutlineButton>
+        <GhostButton C={C} onClick={() => ctx.forget()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
+          {t('resting.forget')}
         </GhostButton>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {ctx.canWithdraw && (
-            <GhostButton C={C} onClick={() => ctx.withdrawLast()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
-              {t('resting.withdraw')}
-            </GhostButton>
-          )}
-          <GhostButton C={C} onClick={() => ctx.forget()} style={{ padding: 0, fontSize: 11, color: C.muted }}>
-            {t('resting.forget')}
-          </GhostButton>
-        </div>
       </div>
     </GalaxyShell>
   )
 }
 
-// Star detail overlay — rendered by App on top of the focused galaxy. A calm
-// sheet that rises from the bottom on phones and settles as a centered card on
-// wider screens. Styled from the same tokens as every other surface (ink glass,
-// the shared Sonar ping, a hairline divider) so it reads as one product — and
-// it only ever shows while the camera is zoomed in, so it never overlaps the
-// "It's out there" layer (which fades out on zoom).
+// The focused-star readout — rendered by App on top of the zoomed galaxy. NOT a
+// bottom-sheet: a frameless close-up that belongs in the sky. A soft radial scrim
+// lifts the text off the bright galaxy center; the tapped star holds at the top
+// (the canvas zooms its real star in behind this), and below it the @handle and a
+// "still waiting · sealed <date>" line read like a star-chart entry. It fades and
+// settles into place (no slide-up, no grabber) and dismisses on a backdrop tap or
+// "keep watching". Only ever shown while the camera is zoomed in.
 export function StarDetail({ C, info, lang, onRemove, onClose }) {
   const { t } = useI18n()
   const [removing, setRemoving] = React.useState(false)
+  const [closing, setClosing] = React.useState(false)
   if (!info) return null
   const when = info.time ? new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }).format(new Date(info.time)) : null
+  // Both dismiss paths fade the readout out first (~200ms), then hand control back
+  // to App — so the card eases away while the camera drifts back out, instead of
+  // popping. Release additionally winks the star out on the canvas.
+  const close = () => {
+    if (closing) return
+    setClosing(true)
+    setTimeout(onClose, 200)
+  }
   const remove = () => {
-    if (removing) return
+    if (closing || removing) return
     setRemoving(true)
-    onRemove()
+    setClosing(true)
+    setTimeout(onRemove, 200)
   }
   return (
     <div
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: 'clamp(0px, 4vw, 6vh)' }}
+      onClick={close}
+      style={{ position: 'fixed', inset: 0, zIndex: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(24px, 7vw, 48px)' }}
     >
+      {/* radial scrim — readable text over the luminous core, no card needed */}
+      <div
+        className={closing ? 'scrim-out' : 'scrim-in'}
+        aria-hidden
+        style={{ position: 'absolute', inset: 0, background: `radial-gradient(115% 80% at 50% 46%, transparent 0%, ${rgba(C.ink, 0.5)} 52%, ${rgba(C.ink, 0.86)} 100%)` }}
+      />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="enter"
-        style={{
-          width: '100%', maxWidth: 400, padding: '14px 24px max(24px, env(safe-area-inset-bottom))',
-          borderRadius: 'clamp(20px, 5vw, 26px)', background: rgba(C.ink2, 0.86), border: `1px solid ${C.line}`,
-          boxShadow: '0 -16px 70px rgba(0,0,0,.55)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-        }}
+        className={closing ? 'readout-out' : 'readout-in'}
+        style={{ position: 'relative', width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
       >
-        {/* grabber — the one consistent affordance for a sheet you can dismiss */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
-          <span style={{ width: 38, height: 4, borderRadius: 99, background: C.line }} />
-        </div>
+        <StarMark C={C} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12 }}>
-          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 10.5, letterSpacing: '3px', textTransform: 'uppercase', color: C.muted }}>
-            {t('star.kicker')}
-          </div>
+        <div style={{ marginTop: 20, fontFamily: "'Space Mono', monospace", fontSize: 10.5, letterSpacing: '3px', textTransform: 'uppercase', color: C.muted }}>
+          {t('star.kicker')}
+        </div>
+        <div style={{ marginTop: 12, marginBottom: 18 }}>
           {info.handle ? (
             <HandleChip C={C} handle={info.handle} color={C.them} big />
           ) : (
             <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 26, color: C.cream }}>✦</span>
           )}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 12.5, color: C.you, fontFamily: "'Space Mono', monospace", letterSpacing: '.3px' }}>
-            <Sonar C={C} color={C.you} size={14} />
-            {t('star.waiting')}
-          </div>
-          {when && <div style={{ fontSize: 12, color: C.muted }}>{t('star.registered')} · {when}</div>}
         </div>
 
-        <div style={{ height: 1, background: C.line, margin: '20px 0 16px' }} />
+        <Rule C={C} delay={0.12} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '6px 12px', padding: '16px 0', fontFamily: "'Space Mono', monospace", fontSize: 12.5, letterSpacing: '.3px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: C.you }}>
+            <Sonar C={C} color={C.you} size={13} /> {t('star.waiting')}
+          </span>
+          {when && (
+            <>
+              <span aria-hidden style={{ width: 3, height: 3, borderRadius: '50%', background: rgba(C.cream, 0.25) }} />
+              <span style={{ color: C.muted }}>
+                {t('star.registered')} · {when}
+              </span>
+            </>
+          )}
+        </div>
+
+        <Rule C={C} delay={0.16} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginTop: 20 }}>
           <GhostButton
             C={C}
             onClick={remove}
@@ -459,7 +515,7 @@ export function StarDetail({ C, info, lang, onRemove, onClose }) {
           >
             <Icon name="trash" size={15} color="currentColor" /> {removing ? t('star.removing') : t('star.remove')}
           </GhostButton>
-          <GhostButton C={C} onClick={onClose} style={{ padding: '6px', fontSize: 12, color: C.muted }}>
+          <GhostButton C={C} onClick={close} style={{ padding: '8px', fontSize: 12, color: C.muted }}>
             {t('star.keep')}
           </GhostButton>
         </div>

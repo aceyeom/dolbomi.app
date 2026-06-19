@@ -208,6 +208,42 @@ export function PrimaryButton({ C, children, onClick, disabled, style }) {
   )
 }
 
+// Pill outline button — a clear secondary action that doesn't pull focus from
+// the galaxy the way the solid amber PrimaryButton does. Used for "enter someone
+// else" on the resting sky.
+export function OutlineButton({ C, children, onClick, style }) {
+  const [h, setH] = React.useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: '12px 22px',
+        borderRadius: 999,
+        cursor: 'pointer',
+        background: h ? rgba(C.cream, 0.06) : 'transparent',
+        border: `1px solid ${h ? rgba(C.cream, 0.3) : C.line}`,
+        color: C.cream,
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontWeight: 500,
+        fontSize: 14,
+        letterSpacing: '.2px',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+        transition: 'background .2s, border-color .2s',
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function GhostButton({ C, children, onClick, style }) {
   const [h, setH] = React.useState(false)
   return (
@@ -578,6 +614,14 @@ export function Icon({ name, size = 16, color = 'currentColor', stroke = 1.8 }) 
         <path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6M6.5 6l.6 9a1 1 0 001 .9h3.8a1 1 0 001-.9l.6-9" {...p} />
       </>
     ),
+    instagram: (
+      <>
+        <rect x="3.2" y="3.2" width="13.6" height="13.6" rx="4.2" {...p} />
+        <circle cx="10" cy="10" r="3.4" {...p} />
+        <circle cx="14" cy="6" r="0.7" {...p} />
+      </>
+    ),
+    plus: <path d="M10 4.6v10.8M4.6 10h10.8" {...p} />,
   }
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" style={{ display: 'block', flexShrink: 0 }}>
