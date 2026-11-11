@@ -29,7 +29,7 @@ then `psql "$DB_URL" -f supabase/seed.sql`.
 
 The Dolbomi app's schema (eighteen tables, twenty-one functions, and its
 thirty-three accounts), three of those tables being the first prototype of
-what became Celestual. The room uses none of it, and `0001_room.sql` expects
-an empty `public` schema: the old one is cleared first, once, by its owner.
-Dolbomi's own migrations are in this repository's history, before the commit
-that hung the room.
+what became Celestual. The room uses none of it. `once/clear-dolbomi.sql`
+removes it and keeps `works` and `notes`: it is run once, by the owner, in
+the dashboard's SQL Editor, and cannot be undone. Dolbomi's own migrations
+are in this repository's history.

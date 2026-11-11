@@ -1,21 +1,19 @@
 /* ╔══════════════════════════════════════════════════════════════════════════╗
-   ║  PLATE II: A RECEIPT                                                     ║
+   ║  II: A RECEIPT AND A LAPTOP                                              ║
    ╚══════════════════════════════════════════════════════════════════════════╝
-   Celestual's object makes its own light. NuvoVet's is paper: it has none,
-   and shows only what the lamp is held to. The receipt is set in NuvoVet's
-   own face and marked in its own ink, the cobalt of nuvovet Claims
-   (nuvovet_systems frontend/src/brand/brand.css `--nvb-claims-ink`). */
+   Paper on the left, which has no light of its own; NuvoVet's own rendered
+   laptop on the right, whose screen is the light. The receipt is set in
+   NuvoVet's face and marked in its ink, the cobalt of nuvovet Claims. */
 
+.nv-stage { padding: clamp(56px, 11vh, 130px) var(--edge) 0; }
 .nv-desk {
   --nv-paper: #ece6d9;
   --nv-paper-hi: #f6f1e6;
   --nv-ink: #191713;
   --nv-ink-2: #5d574d;
   --nv-cobalt: #1d3c6e;
-  --nv-cobalt-lit: #9dbcee; /* the same ink on the dark */
-  width: 100%; max-width: 660px;
-  display: grid; grid-template-columns: minmax(0, 0.94fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 40px);
-  align-items: start;
+  display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: clamp(16px, 3vw, 56px);
+  align-items: center;
 }
 
 /* ── the paper ── */
@@ -42,20 +40,22 @@
   position: relative; width: calc(100% + 16px); margin: 0 -8px; padding: 4px 8px 3px;
   display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: baseline;
   text-align: left; color: inherit; font: inherit; border-radius: 1px;
-  transition: background-color 160ms ease;
+  transition: background-color 140ms ease;
 }
 .nv-desc { min-width: 0; }
 .nv-qty { color: var(--nv-ink-2); font-size: 11px; white-space: nowrap; }
 .nv-amt { text-align: right; white-space: nowrap; }
-/* what the engine wrote in the margin once a line has been read: its code,
-   in the adjuster's ink. The room is kept for it, so the paper never moves */
+/* what the engine wrote in the margin once a line has been read */
 .nv-mark {
-  grid-column: 1 / -1; height: 13px; margin-top: 0;
+  grid-column: 1 / -1; height: 13px;
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; white-space: pre; color: var(--nv-cobalt);
-  opacity: 0; transition: opacity 260ms ease;
+  opacity: 0; transition: opacity 240ms ease;
 }
 .nv-line.is-read .nv-mark { opacity: 1; }
-.nv-line.is-at { background: rgba(29, 60, 110, 0.085); }
+.nv-line.is-at { background: rgba(29, 60, 110, 0.12); }
+/* the scan: the line being read is under the laptop's light */
+.nv-paper.is-scanning .nv-line.is-at { background: rgba(29, 60, 110, 0.9); color: #fff; }
+.nv-paper.is-scanning .nv-line.is-at .nv-mark, .nv-paper.is-scanning .nv-line.is-at .nv-qty { color: #cfe0ff; }
 .nv-line:focus-visible { outline-color: var(--nv-cobalt); outline-offset: -1px; }
 
 .nv-total { display: flex; justify-content: space-between; padding-top: 11px; font-weight: 650; font-size: 14px; }
@@ -66,49 +66,82 @@
   display: grid; justify-items: center; gap: 1px; padding: 7px 12px 6px;
   border: 2px solid var(--nv-cobalt); border-radius: 3px; color: var(--nv-cobalt);
   font-weight: 700; font-size: 17px; line-height: 1.1; letter-spacing: 0.02em;
-  transform: rotate(-7deg) scale(1.12); opacity: 0;
-  transition: opacity 180ms ease, transform 320ms var(--ease-out);
+  transform: rotate(-7deg) scale(1.5); opacity: 0;
+  transition: opacity 120ms ease, transform 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
   mix-blend-mode: multiply; pointer-events: none;
 }
 .nv-stamp span + span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; }
-.nv-paper.is-decided .nv-stamp { opacity: 0.86; transform: rotate(-7deg); }
+.nv-paper.is-decided .nv-stamp { opacity: 0.88; transform: rotate(-7deg); }
 
-/* ── the reading ── */
-.nv-reading-lit { min-width: 0; align-self: stretch; }
-.nv-reading { border-top: 1px solid var(--hair); }
-.nv-reading.is-empty { border-top-color: transparent; padding-top: 12px; }
-.nv-row {
-  display: grid; grid-template-columns: 5.4em minmax(0, 1fr); gap: 12px;
-  padding: 10px 0 11px; border-bottom: 1px solid var(--hair);
-  font-size: var(--t-small); line-height: 1.35;
+/* ── the laptop ── Laptop.jsx */
+.nv-laptop { min-width: 0; justify-self: end; width: 100%; max-width: 980px; }
+.lap { position: relative; width: 100%; aspect-ratio: 1.25; }
+.lap img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+.lap-open, .lap-glare { opacity: 0; }
+.lap.is-open .lap-open { opacity: 1; }
+.lap.is-open .lap-lid { opacity: 0; }
+.lap.is-open .lap-glare { opacity: 0.8; }
+/* the screen: 1200 by 750, laid into the glass by its four corners */
+.lap-screen, .lap-glow {
+  position: absolute; left: 0; top: 0; width: 1200px; height: 750px; transform-origin: 0 0;
+  opacity: 0; transition: opacity 420ms var(--ease-light) 140ms;
 }
-.nv-row dt { font-style: italic; color: var(--ash); }
-.nv-row dd { display: grid; gap: 2px; min-width: 0; }
-/* the product's words and figures are in the product's face */
-.nv-ko, .nv-n, .nv-code { font-family: var(--data); font-size: 0.92em; font-variant-numeric: tabular-nums; word-break: keep-all; }
-.nv-code { color: var(--nv-cobalt-lit); font-weight: 600; letter-spacing: 0.01em; }
-.nv-sub { color: var(--ash); }
-.nv-flag { color: var(--bone); }
+.lap.is-open .lap-screen { opacity: 1; }
+.lap-screen { overflow: hidden; background: #fdfdfb; border-radius: 26px 26px 6px 6px; }
+/* what the lit glass throws on the room */
+.lap-glow { background: #cfe0ff; filter: blur(90px); z-index: -1; transition-delay: 0ms; }
+.lap.is-open .lap-glow { opacity: 0.2; }
 
-.nv-reading .for-touch { display: none; }
-@media (hover: none) {
-  .nv-reading .for-mouse { display: none; }
-  .nv-reading .for-touch { display: inline; }
+/* ── on the screen ── in NuvoVet's own manner: ink on white, one cobalt */
+.nvs {
+  width: 100%; height: 100%; padding: 44px 64px 48px; display: grid; grid-template-rows: auto 1fr;
+  color: #16191e; font-family: var(--data); font-variant-numeric: tabular-nums; word-break: keep-all;
 }
+.nvs p { margin: 0; }
+.nvs-bar-top { display: flex; align-items: baseline; gap: 12px; font-size: 30px; font-weight: 500; color: #1d3c6e; padding-bottom: 22px; border-bottom: 2px solid rgba(16, 24, 40, 0.14); }
+.nvs-bar-top b { color: #16191e; font-weight: 700; }
+.nvs-bar-top span { margin-left: auto; font-size: 22px; color: #646c77; }
+.nvs-read, .nvs-verdict, .nvs-wait { position: relative; align-self: center; animation: nvs-in 260ms var(--ease-out); }
+@keyframes nvs-in { from { opacity: 0; transform: translateY(14px); } }
+.nvs-raw { font-size: 30px; color: #646c77; }
+.nvs-code { font-size: 148px; line-height: 1; font-weight: 700; letter-spacing: -0.03em; color: #1d3c6e; margin-top: 6px !important; }
+.nvs-code.is-drug { font-size: 92px; text-transform: capitalize; }
+.nvs-name { font-size: 42px; line-height: 1.15; font-weight: 500; margin-top: 8px !important; }
+.nvs-step { position: absolute; right: 0; top: 0; font-size: 30px; color: #646c77; }
+/* the region's fees as a rule, and this price on it */
+.nvs-gauge { position: relative; height: 104px; margin-top: 46px; border-bottom: 3px solid #16191e; }
+.nvs-over { position: absolute; bottom: 0; height: 26px; background: #1d3c6e; opacity: 0.2; }
+.nvs-tick { position: absolute; bottom: 0; height: 26px; border-left: 3px solid #16191e; transition: left 420ms var(--ease-out); }
+.nvs-tick i, .nvs-tick b { position: absolute; left: -3px; white-space: nowrap; font-style: normal; transform: translateX(-50%); }
+.nvs-tick i { bottom: 68px; font-size: 22px; color: #646c77; }
+.nvs-tick b { bottom: 36px; font-size: 26px; font-weight: 600; }
+.nvs-tick:first-of-type i, .nvs-tick:first-of-type b { transform: none; }
+.nvs-tick.is-price { border-left-color: #1d3c6e; height: 46px; }
+.nvs-tick.is-price i, .nvs-tick.is-price b { color: #1d3c6e; transform: translateX(-100%); left: 0; padding-right: 10px; }
+.nvs-tick.is-price b { font-weight: 700; }
+.nvs-find { font-size: 34px; margin-top: 30px !important; color: #16191e; }
+.nvs-find b { color: #1d3c6e; font-weight: 700; }
+.nvs-find.is-clear { color: #646c77; margin-top: 22px !important; }
+.nvs-find.is-clear b { color: #28553b; }
 
-/* On a narrow window the reading cannot stand beside the receipt, and under
-   it it would be a scroll away from the line that was touched. So it is a
-   tray at the foot of the window for as long as the receipt is in it. */
-@media (max-width: 620px) {
-  .nv-desk { grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 400px; }
-  .nv-reading-lit {
-    position: sticky; bottom: 0; z-index: 6; min-height: 236px; margin: 0 calc(var(--edge) * -1); padding: 0 var(--edge) 10px;
-    background: linear-gradient(rgba(var(--void-rgb), 0), var(--void) 22px);
-    padding-top: 26px;
-  }
-  .nv-row { padding: 7px 0 8px; font-size: var(--t-caption); grid-template-columns: 4.8em minmax(0, 1fr); }
-  .nv-reading.is-empty { padding-top: 18px; }
+.nvs-decision { font-size: 190px; line-height: 0.95; font-weight: 700; letter-spacing: -0.04em; color: #1d3c6e; display: flex; align-items: baseline; gap: 28px; margin-top: 6px !important; }
+.nvs-decision span { font-size: 44px; letter-spacing: 0; font-weight: 600; }
+.nvs-bar { height: 30px; background: rgba(16, 24, 40, 0.1); margin-top: 34px; }
+.nvs-bar span { display: block; height: 100%; background: #1d3c6e; animation: nvs-grow 700ms var(--ease-out); transform-origin: left; }
+@keyframes nvs-grow { from { transform: scaleX(0); } }
+.nvs-sums { font-size: 34px; margin-top: 18px !important; color: #4d5560; }
+.nvs-sums b { color: #16191e; font-weight: 700; }
+.nvs-wait .nvs-code { color: #16191e; }
+.nvs-wait .nvs-name { color: #646c77; }
+
+/* On a narrow window the laptop goes over the receipt and stays at the top
+   of the window while the receipt is read under it. */
+@media (max-width: 760px) {
+  .nv-desk { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .nv-laptop { order: -1; justify-self: stretch; max-width: none; position: sticky; top: 44px; z-index: 6; background: linear-gradient(var(--void) 86%, rgba(var(--void-rgb), 0)); padding-bottom: 14px; margin: 0 calc(var(--edge) * -1); width: auto; padding-left: var(--edge); padding-right: var(--edge); }
+  .nv-paper-lit { max-width: 360px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nv-stamp { transition: opacity 180ms ease; transform: rotate(-7deg); }
+  .nvs-read, .nvs-verdict, .nvs-wait, .nvs-bar span { animation: none; }
 }

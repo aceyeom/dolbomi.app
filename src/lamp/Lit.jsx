@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { lamp } from './lamp.js'
-import '../styles/lamp.css'
+import { Glow } from './Glow.jsx'
 
 /**
  * A region the lamp falls on. It is drawn as it looks fully lit, and a shade
@@ -25,11 +25,9 @@ export function Lit({ as: Tag = 'div', depth = 'text', lit = 0, className = '', 
   )
 }
 
-/** The pool the lamp leaves on the wall, and the grain that makes the dark a room. Mounted once. */
+/** The lamp, lit: its light on the wall (Glow) and the grain that makes the dark a room. Mounted once. */
 export function Room() {
-  const haze = useRef(null)
   useEffect(() => {
-    lamp.setHaze(haze.current)
     lamp.start()
     let live = true
     const up = () => { if (live) lamp.light() }
@@ -41,7 +39,7 @@ export function Room() {
   }, [])
   return (
     <>
-      <div ref={haze} className="haze" aria-hidden="true" />
+      <Glow />
       <div className="grain" aria-hidden="true" />
     </>
   )

@@ -1,93 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { lamp } from '../lamp/lamp.js'
-import { createRelief } from './relief.js'
+import { LightType } from '../type/LightType.jsx'
 import { site } from '../data/site.js'
-import '../styles/hero.css'
+import './hero.css'
 
 /**
- * The first wall. The name stands off it in relief and the lamp is held to
- * it (relief.js). The heading is real text underneath: it is what a screen
- * reader and a search engine get, and what is shown as plain type where
- * there is no WebGL to light it.
+ * The first wall. The name, hairline thin in the dark, and the lamp: on
+ * arrival it makes one pass across the name by itself, so the first thing a
+ * visitor sees is what the light does to a letter, and then it is theirs.
  */
-export function Hero({ lights }) {
-  const canvas = useRef(null)
-  const relief = useRef(null)
-  const [drawn, setDrawn] = useState(false)
-  const [moved, setMoved] = useState(false)
+export function Hero() {
+  const name = useRef(null)
 
   useEffect(() => {
-    let alive = true
-    let off = null
-    let ro = null
-    let timer = 0
-    const start = () => {
-      if (!alive || !canvas.current) return
-      const r = createRelief(canvas.current, { words: site.words, family: 'Newsreader', weight: 440 })
-      if (!r) return
-      relief.current = r
-      r.resize()
-      r.flat(document.documentElement.dataset.lights === 'up')
-      setDrawn(true)
-      off = lamp.subscribe((f) => r.set(f))
-      // a window being dragged is redrawn at its old size and struck again once it is still
-      ro = new ResizeObserver(() => {
-        clearTimeout(timer)
-        timer = setTimeout(() => r.resize(), 140)
-      })
-      ro.observe(canvas.current)
+    let live = true
+    const go = () => {
+      if (!live || !name.current) return
+      const r = name.current.getBoundingClientRect()
+      const y = r.top + r.height * 0.5
+      lamp.pass([r.left - r.width * 0.2, y], [r.left + r.width * 0.3, y], 1700)
     }
-    // the name is set in the page's own face, so it waits for it
-    const face = document.fonts?.load ? document.fonts.load('440 120px Newsreader', site.name) : Promise.resolve()
-    Promise.race([face, new Promise((res) => setTimeout(res, 2500))]).then(start, start)
-    return () => {
-      alive = false
-      clearTimeout(timer)
-      if (off) off()
-      if (ro) ro.disconnect()
-      if (relief.current) relief.current.destroy()
-      relief.current = null
-    }
+    const ready = document.fonts?.ready || Promise.resolve()
+    Promise.race([ready, new Promise((res) => setTimeout(res, 1800))]).then(() => setTimeout(go, 250))
+    return () => { live = false }
   }, [])
 
-  useEffect(() => {
-    if (relief.current) relief.current.flat(lights === 'up')
-  }, [lights])
-
-  // the hint is an instruction, and it goes out once it has been followed
-  useEffect(() => {
-    if (moved) return undefined
-    let travelled = 0
-    let last = null
-    const on = (x, y) => {
-      if (last) travelled += Math.hypot(x - last[0], y - last[1])
-      last = [x, y]
-      if (travelled > 420) setMoved(true)
-    }
-    const mouse = (e) => { if (e.pointerType !== 'touch') on(e.clientX, e.clientY) }
-    const finger = (e) => { const t = e.touches[0]; if (t) on(t.clientX, t.clientY) }
-    window.addEventListener('pointermove', mouse, { passive: true })
-    window.addEventListener('touchmove', finger, { passive: true })
-    return () => {
-      window.removeEventListener('pointermove', mouse)
-      window.removeEventListener('touchmove', finger)
-    }
-  }, [moved])
-
   return (
-    <section className={`hero${drawn ? ' is-drawn' : ''}`} id="top" aria-labelledby="hero-name" data-lamp-rest="0.3 0.4">
-      <canvas ref={canvas} className="hero-relief" aria-hidden="true" />
-      <h1 id="hero-name" className="hero-name">
-        {site.words.map((w) => <span key={w}>{w} </span>)}
-      </h1>
-      <div className="hero-foot">
-        <p className="hero-line">
-          Founder of <a href="#celestual">Celestual</a> and <a href="#nuvovet">NuvoVet</a>.
-        </p>
-        <p className={`hero-hint${moved ? ' is-out' : ''}`} aria-hidden={moved || undefined}>
-          <span className="for-mouse">Move the lamp.</span>
-          <span className="for-touch">Drag the lamp.</span>
-        </p>
+    <section className="hero" id="top" aria-label={site.name} data-lamp-colour="255,61,31,1">
+      <p className="hero-over label"><b>Portfolio</b><span>{site.year}</span></p>
+      <div ref={name} className="hero-name-box" data-lamp-rest="0.3 0.5">
+        <LightType as="h1" className="hero-name is-stack" text={site.name} reach={0.62} />
+      </div>
+      <div className="hero-under">
+        <p className="line">Founder of <a href="#celestual">Celestual</a> and <a href="#nuvovet">NuvoVet</a>.</p>
+        <p className="label hero-hint"><span className="for-mouse">Move the light</span><span className="for-touch">Drag the light</span></p>
       </div>
     </section>
   )

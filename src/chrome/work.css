@@ -1,0 +1,16 @@
+/* ── a work ── WorkHead.jsx. Every work opens the same way. */
+.work { position: relative; z-index: 1; padding-top: clamp(96px, 18vh, 200px); }
+.work-head { padding: 0 var(--edge); }
+.work-meta { display: flex; flex-wrap: wrap; gap: 6px clamp(18px, 3vw, 44px); padding-bottom: clamp(18px, 3vh, 30px); }
+.work-site { margin-left: auto; color: var(--bone); text-decoration: none; box-shadow: inset 0 -2px 0 var(--red); padding-bottom: 3px; }
+.work-title { font-size: clamp(4rem, 19.5vw, 24rem); }
+.work-line { margin-top: clamp(20px, 3.4vh, 40px); max-width: 21ch; }
+
+/* ── caption and keys ── */
+.keys { margin-top: clamp(20px, 3.4vh, 36px); }
+.keys-caption { min-height: 1.3em; font-size: var(--t-line); line-height: 1.16; letter-spacing: -0.018em; font-weight: 420; font-stretch: 96%; text-wrap: balance; }
+.keys-row { display: flex; flex-wrap: wrap; gap: 4px clamp(22px, 4vw, 52px); margin-top: 10px; }
+
+@media (max-aspect-ratio: 1/1) {
+  .work-title { font-size: clamp(4rem, 27vw, 16rem); }
+}

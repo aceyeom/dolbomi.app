@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Plate, Stage } from '../Plate.jsx'
+import { useEffect, useRef, useState } from 'react'
+import { WorkHead, Keys } from '../../chrome/WorkHead.jsx'
+import { Wall } from '../../wall/Wall.jsx'
 import { Lit } from '../../lamp/Lit.jsx'
 import { lamp } from '../../lamp/lamp.js'
 import { useSequence } from '../../lib/sequence.js'
@@ -14,15 +15,37 @@ const KAI = { who: 'kai', to: 'lin', colour: 'amber', stamp: '10/08/26', words: 
 const DARK = { power: 'off', face: 'note', typed: 0, writing: false, shows: 'own' }
 const START = { stage: 'idle', busy: false, lin: DARK, kai: DARK }
 
-const CAPTIONS = {
-  idle: 'Lin has something to say to Kai, and has never said it.',
+const SAID = {
+  idle: 'Lin has never said it.',
   writing: 'Lin writes it, and sends it privately.',
-  sent: 'Sent, and sealed. Kai is not told that it exists.',
-  answering: 'In the same week, without knowing, Kai writes one to Lin.',
-  night: 'Every mutual is told on Saturday at nine.',
-  mutual: 'It’s mutual. Both find out at the same moment, and each reads the other’s note for the first time.',
-  passing: 'Saturday at nine comes, and there is no note from Kai.',
-  lapsed: 'Not this time. Kai never knows. The server keeps a name only as a salted one-way hash, so nothing it holds could say.',
+  sent: 'Sealed. Kai is never told.',
+  answering: 'Not knowing, Kai writes one too.',
+  night: 'Saturday, nine.',
+  mutual: 'It’s mutual. Both find out at once.',
+  passing: 'Saturday comes. Nothing from Kai.',
+  lapsed: 'Not this time. Kai never knows.',
+}
+
+/** The film Celestual made for itself, silent, on a loop, playing only while it is in the window. */
+function Film() {
+  const ref = useRef(null)
+  useEffect(() => {
+    const v = ref.current
+    if (!v || typeof IntersectionObserver !== 'function') return undefined
+    const still = matchMedia('(prefers-reduced-motion: reduce)')
+    const io = new IntersectionObserver(([en]) => {
+      if (en.isIntersecting && !still.matches) v.play().catch(() => {})
+      else v.pause()
+    }, { threshold: 0.35 })
+    io.observe(v)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <figure className="cs-film">
+      <video ref={ref} src="/media/celestual-reel.mp4" poster="/media/celestual-reel.jpg" muted loop playsInline preload="none" width="540" height="960" aria-label="Celestual’s film: a letter is written, sent privately, and found to be mutual" />
+      <figcaption className="label"><b>The film</b><span>35 s</span></figcaption>
+    </figure>
+  )
 }
 
 export function Celestual() {
@@ -92,7 +115,7 @@ export function Celestual() {
           { label: 'Kai sends one too', onPress: sendKai, disabled: s.busy },
           { label: 'Saturday comes without one', onPress: saturday, disabled: s.busy },
         ]
-      : [{ label: 'Start again', onPress: again, disabled: s.busy }]
+      : [{ label: 'Again', onPress: again, disabled: s.busy }]
 
   const phone = (me, other, p) => {
     const note = p.shows === 'theirs' ? other : me
@@ -108,39 +131,32 @@ export function Celestual() {
             label={`${me.who}’s phone: ${state}`}
           />
         </Lit>
-        <p className="cs-who">{me.who}</p>
+        <p className="cs-who label">{me.who}</p>
       </div>
     )
   }
 
   return (
-    <Plate
-      id="celestual" numeral="I" title="Celestual"
-      lede="A note that is only read if one comes back."
-      facts={[
-        ['Role', 'Founder'],
-        ['Since', '2026'],
-        ['Made with', 'React, Postgres on Supabase with row-level security, edge functions, Stripe'],
-        ['Standing', 'Live at celestual.us'],
-      ]}
-      link={{ href: 'https://celestual.us', label: 'celestual.us' }}
-      stage={(
-        <Stage rest="0.5 0.4" caption={CAPTIONS[said]} keys={keys} label="Celestual, shown on two phones">
+    <section className="work" id="celestual" aria-labelledby="celestual-title" data-lamp-colour="143,184,220,0.5">
+      <WorkHead
+        id="celestual" numeral="I" kind="Venture" year="2026" title="Celestual"
+        line="A note that is only read if one comes back."
+        href="https://celestual.us" site="celestual.us"
+      />
+
+      <Wall />
+
+      <div className="cs-how">
+        <div className="cs-demo" data-lamp-rest="0.5 0.36">
+          <p className="label cs-demo-label"><b>How it works</b><span>Two phones</span></p>
           <div className="cs-pair">
             {phone(LIN, KAI, s.lin)}
             {phone(KAI, LIN, s.kai)}
           </div>
-        </Stage>
-      )}
-    >
-      <p>
-        You send a private note to somebody’s Instagram handle. They are never told. Only if they send one to you
-        do you both find out, at the same moment, on Saturday at nine. If it is never mutual, nothing is revealed
-        to anybody.
-      </p>
-      <p>
-        Around it stands the wall: short anonymous letters, each one a phone screen left on in a dark room.
-      </p>
-    </Plate>
+          <Keys caption={SAID[said]} keys={keys} />
+        </div>
+        <Film />
+      </div>
+    </section>
   )
 }
