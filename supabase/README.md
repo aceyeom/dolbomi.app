@@ -1,64 +1,35 @@
-# Supabase backend
+# The database
 
-The backend for **DOLBOMI**. Apply to a Supabase project (Seoul region) per
-[../DEPLOYMENT.md](../DEPLOYMENT.md).
+Project `dolbomi_db` on Supabase (Seoul, `ap-northeast-2`).
 
-## Files (run in this order)
+## What is in it
 
-| # | File | What it does |
+`migrations/0001_room.sql` is the whole schema:
+
+| Table | What | A visitor (`anon`) may |
 | --- | --- | --- |
-| 1 | `migrations/0001_init.sql` | reference + per-user tables, RLS policies |
-| 2 | `migrations/0002_functions.sql` | `SECURITY DEFINER` RPCs (the game logic) |
-| 3 | `migrations/0003_onboarding_user_opps.sql` | onboarding profile fields (병과·관심사·role), interest tags, user-created opportunities + admin review RPCs |
-| 4 | `migrations/0004_design_revamp.sql`, `0005_design_revamp_v2.sql` | design-revamp schema tweaks |
-| 5 | `seed.sql` | reference content (catalog/benefits/titles/quest pool) — **generated** |
+| `public.works` | the index: one row for each work | read rows where `published` |
+| `public.notes` | notes left through the form | insert `name`, `reach`, `body` |
 
-All are idempotent (`if not exists` / `create or replace` / `truncate`),
-so re-running is safe. **Note:** `seed.sql` now writes the `tags` columns, so
-run `0003` before re-seeding.
+Nothing else is granted. There is no policy to read, change or delete a note,
+so the only way to read one is as the owner: the Supabase dashboard, Table
+Editor, `notes`. A trigger stops the table taking more than thirty notes in an
+hour.
 
-## Apply
+`seed.sql` fills `works`. It is generated from `src/data/works.js`
+(`npm run gen:seed`) and is an upsert, so it is safe to run again.
 
-**SQL Editor (simplest):** paste each file's contents and Run, in order.
+## Setting it up on an empty database
 
-**CLI:**
-```bash
-supabase link --project-ref <ref>
-supabase db push                              # applies migrations/
-psql "$SUPABASE_DB_URL" -f supabase/seed.sql  # loads the seed
-```
+Run `migrations/0001_room.sql`, then `seed.sql`, each as one query in the SQL
+Editor, in that order. Or with the CLI: `supabase link`, `supabase db push`,
+then `psql "$DB_URL" -f supabase/seed.sql`.
 
-## Regenerating the seed
+## What was here before
 
-`seed.sql` is generated from `dolbomi-app/src/data/index.js` (the single source of
-truth for reference content) so the database and the SPA's offline fallback can't
-diverge. After editing the catalog:
-
-```bash
-npm run gen:seed   # from the repo root → rewrites supabase/seed.sql
-```
-
-Then re-run `seed.sql` in Supabase.
-
-## Model
-
-- **Reference tables** (`stat_defs`, `opportunities`, `milestones`, `subquests`,
-  `benefits`, `titles`, `quest_pool`) — readable by any authenticated user.
-  Community entries published by an admin get a `c-` id prefix.
-- **Per-user tables** (`profiles`, `stats`, `tonight_quests`, `user_subquests`,
-  `user_titles`, `checkins`, `activity`, `user_opportunities`) — RLS
-  `user_id = auth.uid()`; admins can additionally read `user_opportunities`.
-- **RPCs** own all writes so XP can't be forged: `app_ensure_profile`,
-  `app_complete_onboarding`, `app_toggle_tonight`, `app_toggle_subquest`,
-  `app_add_tonight`, `app_checkin`, `app_equip_title`, `app_save_user_opp`,
-  `app_delete_user_opp`, `app_submit_user_opp`, `app_review_user_opp`
-  (+ helpers `app_award_titles`, `app_seoul_date`, `app_pick_pool`, `app_is_admin`).
-
-## Making someone an admin
-
-```sql
-update profiles set role = 'admin' where id = '<auth user uuid>';
-```
-
-Admins see the 심사 대기열 (review queue) in the app's Settings screen and can
-publish user-submitted opportunities to everyone's radar.
+The Dolbomi app's schema (eighteen tables, twenty-one functions, and its
+thirty-three accounts), three of those tables being the first prototype of
+what became Celestual. The room uses none of it, and `0001_room.sql` expects
+an empty `public` schema: the old one is cleared first, once, by its owner.
+Dolbomi's own migrations are in this repository's history, before the commit
+that hung the room.

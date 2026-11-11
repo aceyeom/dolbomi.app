@@ -1,0 +1,126 @@
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  PLATE I: TWO SCREENS                                                    ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   Celestual's letter, as its own stylesheet draws it (app/src/wall/screen.css):
+   a backlit LCD photographed in the dark. Every size inside a screen is `cqw`
+   of that screen, so it is one drawing at every size. `--s-*` is the colour
+   (pix.js `skin`). */
+
+.cs-pair {
+  width: 100%; max-width: 620px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 4.2vw, 56px);
+  align-items: start;
+}
+.cs-phone { display: grid; gap: 14px; justify-items: center; min-width: 0; }
+/* a screen is a size container, so it has no width of its own to offer: it takes the column's */
+.cs-phone > .lit { width: 100%; }
+.cs-who { font-style: italic; font-size: var(--t-small); color: var(--ash); transition: color 500ms ease; }
+.cs-phone.is-lit .cs-who { color: var(--bone); }
+
+/* ── the photograph ── */
+.cs-scene { position: relative; width: 100%; container-type: inline-size; isolation: isolate; }
+/* the light a screen throws on the dark round it, in its own colour */
+.cs-halo {
+  position: absolute; inset: -22cqw; z-index: -1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(closest-side, var(--s-glow), transparent);
+  opacity: 0; transform: scale(0.86);
+  transition: opacity 700ms var(--ease-light), transform 900ms var(--ease-out);
+}
+.cs-scene.is-on .cs-halo { opacity: 0.3; transform: none; }
+.cs-scene.is-standby .cs-halo { opacity: 0.085; transform: scale(0.92); }
+
+.cs-scr {
+  position: relative; container-type: inline-size;
+  width: 100%; aspect-ratio: 1 / 1.16; overflow: hidden; overflow: clip; border-radius: 1.4%;
+  display: flex; flex-direction: column;
+  font-family: var(--pixel); font-weight: 400; letter-spacing: 0.005em; line-height: 1;
+  color: var(--s-ink);
+  background: #0a0908;
+  -webkit-font-smoothing: antialiased;
+  transition: filter 600ms var(--ease-light);
+}
+/* the two phones are turned a little toward each other */
+.cs-phone:first-child .cs-scr { transform: perspective(1100px) rotateY(5deg) rotateX(1.2deg) rotateZ(-0.5deg); }
+.cs-phone:last-child .cs-scr { transform: perspective(1100px) rotateY(-5deg) rotateX(1.2deg) rotateZ(0.5deg); }
+
+/* everything that is light: it comes up together and goes out together */
+.cs-bg, .cs-top, .cs-body, .cs-keys, .cs-grid {
+  opacity: 0; transition: opacity 520ms var(--ease-light);
+}
+.cs-scene.is-on .cs-bg, .cs-scene.is-on .cs-top, .cs-scene.is-on .cs-body, .cs-scene.is-on .cs-keys, .cs-scene.is-on .cs-grid,
+.cs-scene.is-standby .cs-bg, .cs-scene.is-standby .cs-top, .cs-scene.is-standby .cs-body, .cs-scene.is-standby .cs-keys, .cs-scene.is-standby .cs-grid { opacity: 1; }
+.cs-scene.is-standby .cs-scr { filter: brightness(0.36) saturate(0.7); }
+.cs-scene.is-on .cs-scr { box-shadow: 0 0 1.4cqw 0.2cqw color-mix(in srgb, var(--s-glow) 45%, transparent); }
+
+.cs-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 95% at 78% 64%, var(--s-hi), var(--s-mid) 52%, var(--s-lo) 100%);
+}
+.cs-top {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  padding: 2.6cqw 2.4cqw 1.8cqw; display: grid; gap: 0.6cqw;
+  background: linear-gradient(180deg, var(--s-top), var(--s-top-2));
+  color: var(--s-lit); fill: var(--s-lit);
+  text-shadow: 0 0 1.6cqw var(--s-bloom);
+}
+.cs-row { display: flex; align-items: center; gap: 1.4cqw; height: 10.4cqw; min-width: 0; }
+.cs-px { flex: 0 0 auto; fill: currentColor; filter: drop-shadow(0 0 0.8cqw var(--s-bloom)); }
+.cs-stamp { margin: 0 auto; font-size: 11cqw; line-height: 0.8; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cs-dear { font-size: 11cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cs-body { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; padding: 3.2cqw 3.2cqw 0; }
+.cs-words {
+  margin: 0; font-size: 11.7cqw; line-height: 1.14; letter-spacing: 0; word-spacing: 0.04em;
+  text-shadow: 0 0 0.5cqw var(--s-soft);
+  overflow-wrap: break-word;
+}
+.cs-unsaid { visibility: hidden; }
+/* the cursor, still there after the last word */
+.cs-caret {
+  display: inline-block; width: 1.5cqw; height: 8cqw; margin: 0 0.5cqw -0.6cqw 0.7cqw;
+  background: var(--s-ink); opacity: 0.85;
+}
+.cs-caret.is-writing { animation: cs-blink 1.06s steps(1) infinite; }
+@keyframes cs-blink { 50% { opacity: 0; } }
+
+.cs-center { height: 100%; display: grid; place-content: center; justify-items: center; gap: 4cqw; padding-bottom: 4cqw; text-align: center; }
+.cs-center .cs-px { fill: var(--s-ink); filter: none; }
+.cs-line { margin: 0; font-size: 10.4cqw; line-height: 0.95; }
+.cs-clock { margin: 0; font-size: 19cqw; line-height: 0.86; }
+
+.cs-keys {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.6cqw 2.6cqw 2.4cqw; height: 15.6cqw;
+  background: var(--s-bot); color: var(--s-lit); fill: var(--s-lit);
+  font-size: 12.4cqw; text-shadow: 0 0 1.6cqw var(--s-bloom);
+}
+.cs-heart { display: inline-flex; align-items: center; gap: 1.6cqw; }
+
+/* what a camera catches of an LCD at night: the grid of its pixels */
+.cs-grid {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: multiply;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.13) 0 0.22cqw, transparent 0.22cqw 0.9cqw),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 0.22cqw, transparent 0.22cqw 0.9cqw);
+}
+/* and the glass itself, which is all there is of a screen that is off: the
+   lamp finds it, and nothing else does */
+.cs-glare {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background:
+    linear-gradient(122deg, rgba(255, 244, 228, 0.13) 0, rgba(255, 244, 228, 0.035) 24%, transparent 44%),
+    linear-gradient(0deg, rgba(255, 244, 228, 0.045), transparent 30%);
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 228, 0.11);
+  border-radius: inherit;
+  transition: opacity 600ms ease;
+}
+.cs-scene.is-on .cs-glare { opacity: 0.5; }
+
+@media (max-width: 520px) {
+  .cs-pair { gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-caret.is-writing { animation: none; }
+  .cs-phone:first-child .cs-scr, .cs-phone:last-child .cs-scr { transform: none; }
+}
