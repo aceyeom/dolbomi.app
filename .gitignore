@@ -1,6 +1,6 @@
-# build output (dolbomi-app → dist/, served at dolbomi.app/)
-dist
 node_modules
+dist
+.vercel
 
 # env
 .env

@@ -1,0 +1,114 @@
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  PLATE II: A RECEIPT                                                     ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   Celestual's object makes its own light. NuvoVet's is paper: it has none,
+   and shows only what the lamp is held to. The receipt is set in NuvoVet's
+   own face and marked in its own ink, the cobalt of nuvovet Claims
+   (nuvovet_systems frontend/src/brand/brand.css `--nvb-claims-ink`). */
+
+.nv-desk {
+  --nv-paper: #ece6d9;
+  --nv-paper-hi: #f6f1e6;
+  --nv-ink: #191713;
+  --nv-ink-2: #5d574d;
+  --nv-cobalt: #1d3c6e;
+  --nv-cobalt-lit: #9dbcee; /* the same ink on the dark */
+  width: 100%; max-width: 660px;
+  display: grid; grid-template-columns: minmax(0, 0.94fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 40px);
+  align-items: start;
+}
+
+/* ── the paper ── */
+.nv-paper-lit { min-width: 0; }
+.nv-paper {
+  position: relative;
+  padding: 20px 16px 76px;
+  background: linear-gradient(176deg, var(--nv-paper-hi), var(--nv-paper) 42%, #e3dccd);
+  color: var(--nv-ink);
+  font-family: var(--data); font-size: 12.5px; line-height: 1.35; font-weight: 450;
+  font-variant-numeric: tabular-nums; word-break: keep-all;
+  /* a receipt is torn off a roll: the foot is the tear */
+  --tooth: 7px;
+  -webkit-mask: linear-gradient(#000, #000) top / 100% calc(100% - var(--tooth)) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, transparent 0) bottom left / calc(var(--tooth) * 2) var(--tooth) repeat-x;
+  mask: linear-gradient(#000, #000) top / 100% calc(100% - var(--tooth)) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #000 90deg, transparent 0) bottom left / calc(var(--tooth) * 2) var(--tooth) repeat-x;
+}
+.nv-head { text-align: center; color: var(--nv-ink-2); padding-bottom: 12px; border-bottom: 1px solid rgba(25, 23, 19, 0.28); }
+.nv-clinic { color: var(--nv-ink); font-weight: 650; font-size: 14px; margin-bottom: 3px; }
+
+.nv-lines { padding: 6px 0; border-bottom: 1px solid rgba(25, 23, 19, 0.28); }
+.nv-line {
+  position: relative; width: calc(100% + 16px); margin: 0 -8px; padding: 4px 8px 3px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: baseline;
+  text-align: left; color: inherit; font: inherit; border-radius: 1px;
+  transition: background-color 160ms ease;
+}
+.nv-desc { min-width: 0; }
+.nv-qty { color: var(--nv-ink-2); font-size: 11px; white-space: nowrap; }
+.nv-amt { text-align: right; white-space: nowrap; }
+/* what the engine wrote in the margin once a line has been read: its code,
+   in the adjuster's ink. The room is kept for it, so the paper never moves */
+.nv-mark {
+  grid-column: 1 / -1; height: 13px; margin-top: 0;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; white-space: pre; color: var(--nv-cobalt);
+  opacity: 0; transition: opacity 260ms ease;
+}
+.nv-line.is-read .nv-mark { opacity: 1; }
+.nv-line.is-at { background: rgba(29, 60, 110, 0.085); }
+.nv-line:focus-visible { outline-color: var(--nv-cobalt); outline-offset: -1px; }
+
+.nv-total { display: flex; justify-content: space-between; padding-top: 11px; font-weight: 650; font-size: 14px; }
+
+/* the decision, stamped on the paper once every line has been read */
+.nv-stamp {
+  position: absolute; right: 18px; bottom: 20px;
+  display: grid; justify-items: center; gap: 1px; padding: 7px 12px 6px;
+  border: 2px solid var(--nv-cobalt); border-radius: 3px; color: var(--nv-cobalt);
+  font-weight: 700; font-size: 17px; line-height: 1.1; letter-spacing: 0.02em;
+  transform: rotate(-7deg) scale(1.12); opacity: 0;
+  transition: opacity 180ms ease, transform 320ms var(--ease-out);
+  mix-blend-mode: multiply; pointer-events: none;
+}
+.nv-stamp span + span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; }
+.nv-paper.is-decided .nv-stamp { opacity: 0.86; transform: rotate(-7deg); }
+
+/* ── the reading ── */
+.nv-reading-lit { min-width: 0; align-self: stretch; }
+.nv-reading { border-top: 1px solid var(--hair); }
+.nv-reading.is-empty { border-top-color: transparent; padding-top: 12px; }
+.nv-row {
+  display: grid; grid-template-columns: 5.4em minmax(0, 1fr); gap: 12px;
+  padding: 10px 0 11px; border-bottom: 1px solid var(--hair);
+  font-size: var(--t-small); line-height: 1.35;
+}
+.nv-row dt { font-style: italic; color: var(--ash); }
+.nv-row dd { display: grid; gap: 2px; min-width: 0; }
+/* the product's words and figures are in the product's face */
+.nv-ko, .nv-n, .nv-code { font-family: var(--data); font-size: 0.92em; font-variant-numeric: tabular-nums; word-break: keep-all; }
+.nv-code { color: var(--nv-cobalt-lit); font-weight: 600; letter-spacing: 0.01em; }
+.nv-sub { color: var(--ash); }
+.nv-flag { color: var(--bone); }
+
+.nv-reading .for-touch { display: none; }
+@media (hover: none) {
+  .nv-reading .for-mouse { display: none; }
+  .nv-reading .for-touch { display: inline; }
+}
+
+/* On a narrow window the reading cannot stand beside the receipt, and under
+   it it would be a scroll away from the line that was touched. So it is a
+   tray at the foot of the window for as long as the receipt is in it. */
+@media (max-width: 620px) {
+  .nv-desk { grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 400px; }
+  .nv-reading-lit {
+    position: sticky; bottom: 0; z-index: 6; min-height: 236px; margin: 0 calc(var(--edge) * -1); padding: 0 var(--edge) 10px;
+    background: linear-gradient(rgba(var(--void-rgb), 0), var(--void) 22px);
+    padding-top: 26px;
+  }
+  .nv-row { padding: 7px 0 8px; font-size: var(--t-caption); grid-template-columns: 4.8em minmax(0, 1fr); }
+  .nv-reading.is-empty { padding-top: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nv-stamp { transition: opacity 180ms ease; transform: rotate(-7deg); }
+}

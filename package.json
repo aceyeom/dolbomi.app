@@ -1,11 +1,24 @@
 {
-  "name": "dolbomi-app-monorepo",
+  "name": "ace-yeom",
   "private": true,
   "version": "1.0.0",
-  "description": "DOLBOMI — 군인 자기개발 앱. A Vite + React SPA on Supabase, live at dolbomi.app/.",
+  "type": "module",
+  "description": "Ace Yeom. Selected works, in a dark room, by one lamp. A Vite + React site on Supabase.",
   "scripts": {
-    "dev": "npm --prefix dolbomi-app run dev",
-    "build": "npm --prefix dolbomi-app install && npm --prefix dolbomi-app run build -- --outDir ../dist --emptyOutDir",
-    "gen:seed": "npm --prefix dolbomi-app run gen:seed"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "gen:seed": "node scripts/gen-seed.mjs",
+    "subset:fonts": "node scripts/subset-fonts.mjs"
+  },
+  "dependencies": {
+    "pretendard": "1.3.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "subset-font": "2.9.0",
+    "vite": "8.3.2"
   }
 }

@@ -1,0 +1,69 @@
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║  LIGHT AND SHADE                                                         ║
+   ╚══════════════════════════════════════════════════════════════════════════╝
+   lamp.js moves two numbers, `--x` and `--y`, on each of the elements below.
+   Everything else here is still. */
+
+/* ── a lit region ──
+   Drawn as it looks under the lamp. The shade over it is the dark, in the
+   room's own black, with the lamp's hole in it: clear at the lamp, and
+   falling away to the region's depth by the edge of the lamp's reach. The
+   stops are the falloff of a light held close to a wall, not a ring. */
+.lit { position: relative; }
+.lit > .shade {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  --a: 0.46;
+  background: radial-gradient(
+    circle at var(--x, -4000px) var(--y, -4000px),
+    rgba(var(--void-rgb), 0) 0,
+    rgba(var(--void-rgb), calc(var(--a) * 0.05)) calc(var(--lamp-r) * 0.2),
+    rgba(var(--void-rgb), calc(var(--a) * 0.22)) calc(var(--lamp-r) * 0.4),
+    rgba(var(--void-rgb), calc(var(--a) * 0.5)) calc(var(--lamp-r) * 0.62),
+    rgba(var(--void-rgb), calc(var(--a) * 0.78)) calc(var(--lamp-r) * 0.86),
+    rgba(var(--void-rgb), var(--a)) calc(var(--lamp-r) * 1.2)
+  );
+  transition: opacity 700ms var(--ease-light);
+}
+.lit[data-depth='text'] > .shade { --a: 0.46; }
+.lit[data-depth='object'] > .shade { --a: 0.9; }
+.lit[data-depth='deep'] > .shade { --a: 0.965; }
+
+/* ── the haze ──
+   What the lamp leaves on the wall and in the air: a warm pool, over
+   everything and adding almost nothing to it, so it has no edge where a
+   region ends. */
+.haze {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0;
+  background: radial-gradient(
+    circle at var(--x, -4000px) var(--y, -4000px),
+    rgba(var(--lamp-rgb), 0.066) 0,
+    rgba(var(--lamp-rgb), 0.04) calc(var(--lamp-r) * 0.3),
+    rgba(var(--lamp-rgb), 0.014) calc(var(--lamp-r) * 0.65),
+    rgba(var(--lamp-rgb), 0) calc(var(--lamp-r) * 1.05)
+  );
+}
+
+/* ── the grain ──
+   The dark is a room, not a screen that is off. One tile of noise, made by
+   a filter in a data URL and never downloaded, laid over everything. It
+   also breaks the bands a slow gradient would show on a cheap panel. */
+.grain {
+  position: fixed; inset: 0; z-index: 61; pointer-events: none; opacity: 0.11;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+
+/* ── the house lights ──
+   One switch in the header turns the room's lights up: the shades lift, the
+   haze goes, and everything is read flat. For anyone who would rather not
+   read by a lamp, and on by itself when more contrast is asked for. */
+:root[data-lights='up'] .lit > .shade { opacity: 0 !important; }
+:root[data-lights='up'] .haze { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lit > .shade { transition: none; }
+}
+@media (forced-colors: active) {
+  .lit > .shade, .haze, .grain { display: none; }
+}
