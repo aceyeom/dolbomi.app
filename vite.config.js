@@ -6,6 +6,8 @@ export default defineConfig({
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,
+    // three.js is one chunk of its own, fetched only as the wall comes near
+    chunkSizeWarningLimit: 700,
   },
   server: { host: true, port: 5173 },
   preview: { host: true, port: 4173 },

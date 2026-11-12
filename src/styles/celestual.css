@@ -6,16 +6,32 @@
    of that screen, so it is one drawing at every size. `--s-*` is the colour
    (pix.js `skin`). */
 
+/* the demonstration on the left, the film on the right */
+.cs-how {
+  padding: clamp(72px, 14vh, 160px) var(--edge) 0;
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.72fr); gap: clamp(28px, 6vw, 110px);
+  align-items: center;
+}
+.cs-demo { min-width: 0; }
+.cs-demo-label { display: flex; gap: 24px; margin-bottom: clamp(20px, 3.6vh, 36px); }
 .cs-pair {
-  width: 100%; max-width: 620px;
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 4.2vw, 56px);
+  width: 100%; max-width: 760px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(16px, 3.4vw, 52px);
   align-items: start;
 }
-.cs-phone { display: grid; gap: 14px; justify-items: center; min-width: 0; }
+.cs-phone { display: grid; gap: 12px; justify-items: center; min-width: 0; }
 /* a screen is a size container, so it has no width of its own to offer: it takes the column's */
 .cs-phone > .lit { width: 100%; }
-.cs-who { font-style: italic; font-size: var(--t-small); color: var(--ash); transition: color 500ms ease; }
+.cs-who { transition: color 500ms ease; }
 .cs-phone.is-lit .cs-who { color: var(--bone); }
+
+/* the film, as a tall screen of its own */
+.cs-film { margin: 0; justify-self: end; width: 100%; max-width: 360px; display: grid; gap: 12px; }
+.cs-film video {
+  width: 100%; height: auto; aspect-ratio: 9 / 16; object-fit: cover; background: #0a0a0c;
+  box-shadow: 0 0 0 1px var(--hair-soft), 0 0 80px rgba(143, 184, 220, 0.12);
+}
+.cs-film figcaption { display: flex; justify-content: space-between; }
 
 /* ── the photograph ── */
 .cs-scene { position: relative; width: 100%; container-type: inline-size; isolation: isolate; }
@@ -117,8 +133,12 @@
 }
 .cs-scene.is-on .cs-glare { opacity: 0.5; }
 
+@media (max-width: 860px) {
+  .cs-how { grid-template-columns: minmax(0, 1fr); }
+  .cs-film { justify-self: start; max-width: 300px; margin-top: 24px; }
+}
 @media (max-width: 520px) {
-  .cs-pair { gap: 16px; }
+  .cs-pair { gap: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .cs-caret.is-writing { animation: none; }

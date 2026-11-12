@@ -1,0 +1,17 @@
+/* LightType.jsx. A line of letters that each have their own width. The line
+   does not wrap: when the light makes it wider than its place, the whole
+   line is drawn a little smaller (LightType.jsx `fit`). On a tall window the
+   words stand one over another. */
+.lt {
+  font-family: var(--display); font-optical-sizing: auto; line-height: 0.8; text-transform: uppercase;
+  letter-spacing: -0.01em; color: var(--bone); margin: 0; display: block; min-width: 0;
+}
+.lt-in { display: inline-flex; flex-wrap: nowrap; gap: 0.04em 0.22em; transform-origin: left center; white-space: nowrap; }
+.lt-w { display: inline-flex; white-space: nowrap; }
+.lt-l {
+  display: inline-block; font-weight: 130; font-stretch: 46%; color: rgb(73, 71, 69);
+  will-change: font-weight, font-stretch;
+}
+@media (max-aspect-ratio: 1/1) {
+  .lt.is-stack .lt-in { flex-direction: column; }
+}

@@ -3,14 +3,13 @@ import { Room } from './lamp/Lit.jsx'
 import { Hero } from './hero/Hero.jsx'
 import { Celestual } from './plates/celestual/Celestual.jsx'
 import { Nuvovet } from './plates/nuvovet/Nuvovet.jsx'
-import { Catalogue } from './catalogue/Catalogue.jsx'
-import { About } from './about/About.jsx'
+import { Index } from './index/Index.jsx'
+import { Note } from './contact/Note.jsx'
 import { site } from './data/site.js'
+import { smooth } from './lib/smooth.js'
 
 const KEY = 'room.lights'
 
-// The room is dark unless the visitor has said otherwise, or their system
-// asks for more contrast than a lamp gives.
 function firstLights() {
   try {
     const kept = localStorage.getItem(KEY)
@@ -22,55 +21,41 @@ function firstLights() {
 
 export function App() {
   const [lights, setLights] = useState(firstLights)
-  // past the first wall the head of the page stands on the dark, so words do not run under words
-  const [past, setPast] = useState(false)
+
+  useEffect(() => smooth(), [])
 
   useEffect(() => {
     document.documentElement.dataset.lights = lights
     try { localStorage.setItem(KEY, lights) } catch { /* as above */ }
   }, [lights])
 
-  useEffect(() => {
-    const hero = document.getElementById('top')
-    if (!hero || typeof IntersectionObserver !== 'function') return undefined
-    const io = new IntersectionObserver(([en]) => setPast(en.intersectionRatio < 0.3), { threshold: [0.3] })
-    io.observe(hero)
-    return () => io.disconnect()
-  }, [])
-
   return (
     <>
-      <a className="skip" href="#works">Skip to the work</a>
-      <header className={`top${past ? ' is-past' : ''}`}>
+      <a className="skip" href="#celestual">Skip to the work</a>
+      <header className="top label">
         <a className="top-name" href="#top">{site.name}</a>
         <nav className="top-nav" aria-label="Sections">
-          <a href="#works">Works</a>
+          <a href="#celestual" className="is-wide">Celestual</a>
+          <a href="#nuvovet" className="is-wide">NuvoVet</a>
           <a href="#index">Index</a>
-          <a href="#about" className="is-wide">About</a>
-          <button
-            type="button" className="lights" aria-pressed={lights === 'up'}
-            onClick={() => setLights((v) => (v === 'up' ? 'lamp' : 'up'))}
-          >
-            House lights
+          <a href="#note">Note</a>
+          <button type="button" className="lights" aria-pressed={lights === 'up'} onClick={() => setLights((v) => (v === 'up' ? 'lamp' : 'up'))}>
+            Lights
           </button>
         </nav>
       </header>
 
       <main>
-        <Hero lights={lights} />
-        <div id="works">
-          <Celestual />
-          <Nuvovet />
-        </div>
-        <Catalogue />
-        <About />
+        <Hero />
+        <Celestual />
+        <Nuvovet />
+        <Index />
+        <Note />
       </main>
 
-      <footer className="foot wrap">
-        <div className="foot-row">
-          <p>{site.name}, {site.year}.</p>
-          <p>Set in Newsreader. The screens are in Jersey 10 and the receipt in Pretendard, as their own products set them.</p>
-        </div>
+      <footer className="foot label">
+        <span>{site.name} {site.year}</span>
+        <span>Roboto Flex, Doto. Jersey 10 on Celestual’s screens, Pretendard on NuvoVet’s.</span>
       </footer>
 
       <Room />

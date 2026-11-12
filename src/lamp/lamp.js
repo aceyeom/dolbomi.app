@@ -18,10 +18,10 @@
 // round halfway there. With reduced motion asked for, it is simply put there.
 //
 // What it writes, once a frame and only when something changed:
-//   the haze     one fixed element, the pool the lamp leaves on the wall
 //   the shades   one per `Lit` region: the dark over that region, with the
 //                lamp's hole cut in it at the lamp's place IN THAT REGION
-//   subscribers  the hero's relief, which does its own arithmetic
+//   subscribers  the light on the wall (Glow), the headline type (LightType)
+//                and anything else that does its own arithmetic
 //
 // Each shade's two custom properties are set on the shade itself, which has
 // no children, so a frame never restyles a subtree.
@@ -45,9 +45,16 @@ const s = {
   focusEl: null,
   touchUntil: 0,
   w: 0, h: 0,
+  // a pass the lamp makes by itself (the first one, across the name)
+  pass: null,
+  // the lamp's colour, which is the colour of the part of the room it is in
+  colour: [255, 61, 31],
+  colourTo: [255, 61, 31],
+  // and how strong its pool on the wall is there (1 on the first wall, less over things to read)
+  pool: 1,
+  poolTo: 1,
 }
 
-let haze = null
 const shades = new Map() // region element -> { shade, seen, x, y }
 const subscribers = new Set()
 let io = null
@@ -86,7 +93,31 @@ function restPoint() {
   return [clamp(best[0], s.w * 0.08, s.w * 0.92), clamp(best[1], s.h * 0.14, s.h * 0.86)]
 }
 
+// The part of the room the lamp is in says what colour its light is
+// (`data-lamp-colour="r,g,b"` on a section). Outside any, it is the room's red.
+function zoneColour() {
+  let found = null
+  for (const el of document.querySelectorAll('[data-lamp-colour]')) {
+    const r = el.getBoundingClientRect()
+    if (s.y >= r.top && s.y < r.bottom) { found = el.dataset.lampColour; break }
+  }
+  const c = found ? found.split(',').map(Number) : [255, 61, 31, 1]
+  if (c.length >= 3 && c.every(Number.isFinite)) {
+    s.colourTo = c.slice(0, 3)
+    s.poolTo = c.length > 3 ? c[3] : 0.6
+  }
+}
+
 function want() {
+  if (s.mode === 'pass') {
+    const p = s.pass
+    const t = Math.min(1, (performance.now() - p.t0) / p.ms)
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+    s.tx = p.from[0] + (p.to[0] - p.from[0]) * e
+    s.ty = p.from[1] + (p.to[1] - p.from[1]) * e
+    if (t >= 1) { s.mode = 'rest'; s.pass = null }
+    return
+  }
   if (s.mode === 'touch' && performance.now() > s.touchUntil) s.mode = 'rest'
   if (s.mode === 'focus') {
     const el = s.focusEl
@@ -103,11 +134,6 @@ function want() {
 
 function write() {
   const light = s.level * (1 - 0.55 * s.duck)
-  if (haze) {
-    haze.style.setProperty('--x', `${s.x.toFixed(1)}px`)
-    haze.style.setProperty('--y', `${s.y.toFixed(1)}px`)
-    haze.style.opacity = light.toFixed(3)
-  }
   // read every box, then write every shade
   const jobs = []
   for (const [el, rec] of shades) {
@@ -124,7 +150,7 @@ function write() {
     rec.shade.style.setProperty('--x', `${x.toFixed(1)}px`)
     rec.shade.style.setProperty('--y', `${y.toFixed(1)}px`)
   }
-  const frame = { x: s.x, y: s.y, light, radius: s.radius }
+  const frame = { x: s.x, y: s.y, vx: s.vx, vy: s.vy, light, radius: s.radius, colour: s.colour, pool: s.pool, lights: document.documentElement.dataset.lights }
   for (const fn of subscribers) fn(frame)
 }
 
@@ -135,7 +161,8 @@ function tick(now) {
   want()
 
   let moving = false
-  if (!s.placed || reduce.matches) {
+  if (!s.placed || reduce.matches || s.mode === 'pass') {
+    // put there, not carried: the first frame, reduced motion, and a pass, which has its own easing
     s.x = s.tx; s.y = s.ty; s.vx = 0; s.vy = 0; s.placed = true
   } else {
     // semi-implicit Euler on a critically damped spring
@@ -156,12 +183,22 @@ function tick(now) {
   }
   const level = ease(s.level, s.levelTo, 2.2)
   const duck = ease(s.duck, s.duckTo, 4.5)
-  const fading = level !== s.level || duck !== s.duck
+  zoneColour()
+  let tinting = false
+  for (let i = 0; i < 3; i++) {
+    const n = ease(s.colour[i], s.colourTo[i], 5)
+    if (n !== s.colour[i]) tinting = true
+    s.colour[i] = Math.abs(s.colourTo[i] - n) < 0.5 ? s.colourTo[i] : n
+  }
+  const pool = ease(s.pool, s.poolTo, 4)
+  if (pool !== s.pool) tinting = true
+  s.pool = pool
+  const fading = level !== s.level || duck !== s.duck || tinting
   s.level = level; s.duck = duck
 
   write()
   dirty = false
-  if (moving || fading || s.mode === 'touch') wake()
+  if (moving || fading || s.mode === 'touch' || s.mode === 'pass') wake()
 }
 
 function wake() {
@@ -175,6 +212,7 @@ function touch() {
 // ── what moves it ──
 function onPointerMove(e) {
   if (e.pointerType === 'touch') return
+  if (s.mode === 'pass') return // the first pass is finished before the hand takes the lamp
   s.mode = 'pointer'
   s.keyboard = false
   s.tx = e.clientX
@@ -244,14 +282,18 @@ export const lamp = {
     touch()
   },
 
-  /** A work turns its own light on (0 to 1) and the lamp gives way to it: one bright thing at a time. */
-  duck(amount) {
-    s.duckTo = clamp(amount, 0, 1)
+  /** The lamp makes one pass by itself, from one place to another, and then rests. */
+  pass(from, to, ms = 1400) {
+    if (reduce.matches) return
+    s.x = from[0]; s.y = from[1]; s.vx = 0; s.vy = 0; s.placed = true
+    s.pass = { from, to, ms, t0: performance.now() }
+    s.mode = 'pass'
     touch()
   },
 
-  setHaze(el) {
-    haze = el
+  /** A work turns its own light on (0 to 1) and the lamp gives way to it: one bright thing at a time. */
+  duck(amount) {
+    s.duckTo = clamp(amount, 0, 1)
     touch()
   },
 
